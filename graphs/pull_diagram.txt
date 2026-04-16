@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant TUR as Turētājs
+    participant VER as Verifikātors
+    participant IZD as Izdevējs
+
+    VER-->>VER: Ieslēdz tīkla savienojumu
+    VER-->>IZD: Ja beidzas atsaukšanas datu termiņš,<br> pieprasa datu atjauninājumu 
+    IZD-->>VER: Atgriež akreditācijas datu komplektu
+    VER-->>VER: Izslēdz tīkla savienojumu
+    TUR->>VER: Uzrāda akreditācijas datus
+    VER-->>IZD: Ja beidzas atsaukšanas datu termiņš un ir tīkla savienojum,<br> pieprasa datu atjauninājumu 
+    IZD-->>VER: Atgriež akreditācijas datu komplektu
+    VER->>VER: Pārbauda vai akreditācijas dati nav atsaukti
+    VER->>TUR: Atgriež apstiprinājumu vai noraidījumu.
