@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant TUR as Turētājs
+    participant VER as Verifikātors
+    participant IZD as Izdevējs
+
+    VER-->>VER: Ieslēdz tīkla savienojumu
+    VER-->>IZD: Ja beidzas atsaukšanas datu termiņš,<br> pieprasa datu atjauninājumu 
+    IZD-->>VER: Atgriež akreditācijas datu komplektu
+    VER-->>VER: Izslēdz tīkla savienojumu
+    TUR->>VER: Uzrāda akreditācijas datus
+    VER-->>IZD: Ja beidzas atsaukšanas datu termiņš un ir tīkla savienojum,<br> pieprasa datu atjauninājumu 
+    IZD-->>VER: Atgriež akreditācijas datu komplektu
+    VER->>VER: Pārbauda vai akreditācijas dati nav atsaukti
+    VER->>TUR: Atgriež apstiprinājumu vai noraidījumu.
+
+    %%Note over CMO: Process registration can be done several times
+    %%Note over CMO: START of process registration
+    %%CMO->>BC:  Sending hashed info about exact process result
+    %%BC-->>BC: Approving and adding block
+    %%BC-->>CMO: Sending approval and block adding timestamp
+    %%CMO-->>MAH: Sending process data with timestamp with protocol
+    %%MAH-->>MAH: Saving data  protocol with timestamp to MAH database
+    %%Note over CMO: END of process registration
+    %%MAH->>BC:  Регистрирует задание на производство (Production Request)
+    %%BC-->>MAH: Подтверждает транзакцию
+
+    %%CMO->>BC:  Добавляет подтверждение выполнения производства (Production Proof)
+    %%BC-->>CMO: Сохраняет подтверждение в блокчейне
+
+    %%MAH->>BC:  Регистрирует поставку и проверку (Delivery + Verification)
+    %%BC-->>MAH: Подтверждает запись и сохраняет статус
+
+    %%Note over BC: Все данные шифруются и видимы только соответствующей паре MAH↔CMO
+
+    %% Добавляем аудитора
+     %%AUD->>MAH: Requests protocol 
+     %%MAH-->>AUD: Sends protocol
+     %%AUD->>BC: Upload process info with timestamp or entire protocol 
+     %%BC->>BC: Creates hash of uploaded info
+     %%BC->>BC: Check if hash exists in blockchain database
+     %%BC->>AUD: Send response of comparison

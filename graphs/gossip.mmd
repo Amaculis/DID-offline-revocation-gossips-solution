@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant IZD as Izdevējs
+    participant VER1 as Verifikators A
+    participant VER2 as Verifikators B
+    participant VER3 as Verifikators C
+    participant TUR as Turētājs
+
+    IZD->>VER1: Publicē atsaukšanas informāciju
+    VER1->>VER2: Izplata (gossip) atsaukšanas datus
+    VER2->>VER3: Izplata (gossip) atsaukšanas datus
+    VER3->>VER1: Periodiska datu apmaiņa (sinhronizācija)
+
+    TUR->>VER2: Uzrāda akreditācijas datus
+
+    VER2->>VER2: Pārbauda lokāli saglabāto atsaukšanas statusu
+    VER2->>TUR: Atgriež apstiprinājumu vai noraidījumu
