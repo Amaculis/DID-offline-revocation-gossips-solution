@@ -19,7 +19,7 @@ sequenceDiagram
     VER2->>VER2: Salīdzina ar lokālo versiju
     alt Ja TUR dati ir jaunāki
         VER2->>VER2: Atjaunina lokālo status list
-    else Ja VER2 jau ir aktuāli dati
+    else Ja VER(B) jau ir aktuāli dati
         VER2->>VER2: Ignorē TUR datus
     end
 
