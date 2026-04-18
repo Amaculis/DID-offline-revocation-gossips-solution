@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant IZD as Izdevējs
+    participant VER1 as Verifikators A
+    participant TUR as Turētājs
+    participant VER2 as Verifikators B
+
+    IZD->>VER1: Publicē jaunu status list (signed)
+
+    VER1->>VER1: Saglabā lokāli (latest version)
+
+    TUR->>VER1: Uzrāda akreditācijas datus
+    VER1->>VER1: Pārbauda atsaukšanas statusu
+    VER1->>TUR: (Opc.) Nosūta jaunāko status list / hash
+
+    TUR->>TUR: Saglabā status list (cache)
+
+    TUR->>VER2: Uzrāda akreditācijas datus + status list
+
+    VER2->>VER2: Salīdzina ar lokālo versiju
+    alt Ja TUR dati ir jaunāki
+        VER2->>VER2: Atjaunina lokālo status list
+    else Ja VER2 jau ir aktuāli dati
+        VER2->>VER2: Ignorē TUR datus
+    end
+
+    VER2->>VER2: Pārbauda vai akreditācija nav atsaukta
+    VER2->>TUR: Atgriež apstiprinājumu vai noraidījumu
