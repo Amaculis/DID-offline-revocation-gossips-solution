@@ -62,3 +62,9 @@ class Issuer:
     def is_revoked(self, credential_id: int) -> bool:
         return credential_id in self._revoked
 
+    # ------------------------------------------------------------------
+    # PUSH support
+    # ------------------------------------------------------------------
+    def notify_online(self, node) -> None:
+        #Kad parādās online, tas tiek informēts par jaunāko StatusList, lai varētu salīdzināt versijas un izlemt, vai pieņemt jauno sarakstu.
+        node.receive_push(self._current_list)
