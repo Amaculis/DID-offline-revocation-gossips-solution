@@ -1,7 +1,7 @@
 """Layer 1 — Unit tests for sim.models dataclasses."""
 from __future__ import annotations
 import pytest
-from sim.models import StatusList, NodeStats
+from sim.common.models import StatusList, NodeStats
 
 
 class TestStatusListIsExpired:

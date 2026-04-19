@@ -5,7 +5,7 @@ Fixtures from conftest: small_pull_nodes, small_pull_run
 """
 from __future__ import annotations
 import pytest
-from sim.metrics import propagation_delay, false_acceptance_rate
+from sim.common.metrics import propagation_delay, false_acceptance_rate
 
 TTL = 600.0
 SIM_DURATION = 7200

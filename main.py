@@ -15,8 +15,8 @@ PARAMS = dict(
 def main():
     results = []
     for label, runner in [("PULL", run_pull) ,
-                          # ("PUSH", run_push), 
-                          #("GOSSIP", run_gossip)
+                           ("PUSH", run_push), 
+                          ("GOSSIP", run_gossip)
                           ]:
         print(f"Running {label} simulation ...")
         results.append(runner(**PARAMS))

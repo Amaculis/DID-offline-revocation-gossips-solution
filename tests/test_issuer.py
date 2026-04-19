@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import simpy
 import pytest
-from sim.issuer import Issuer
+from sim.common.issuer import Issuer
 
 
 def _make(

@@ -4,10 +4,10 @@ import random
 import pytest
 import simpy
 
-from sim.issuer import Issuer
+from sim.common.issuer import Issuer
 from sim.strategies.pull import PullNode
 from sim.run_pull import run as pull_run, _patch_awareness_tracking
-from sim.network import assign_initial_states
+from sim.common.network import assign_initial_states
 
 # ---------------------------------------------------------------------------
 # Low-level building blocks
