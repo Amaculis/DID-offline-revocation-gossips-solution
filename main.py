@@ -3,7 +3,7 @@ from sim.run_push import run as run_push
 from sim.run_gossip import run as run_gossip
 
 PARAMS = dict(
-    network_size=20000,
+    network_size=500,
     offline_ratio=0.2,
     ttl=3600,
     revocation_rate=0.01,
@@ -14,7 +14,10 @@ PARAMS = dict(
 
 def main():
     results = []
-    for label, runner in [("PULL", run_pull), ("PUSH", run_push), ("GOSSIP", run_gossip)]:
+    for label, runner in [("PULL", run_pull) ,
+                          # ("PUSH", run_push), 
+                          #("GOSSIP", run_gossip)
+                          ]:
         print(f"Running {label} simulation ...")
         results.append(runner(**PARAMS))
 
@@ -28,17 +31,27 @@ def _print_comparison(results: list[dict]):
     print("=" * len(header))
 
     rows = [
-        ("Propagation delay p95 (s)",   lambda r: _fmt(r["propagation_delay_p95_s"])),
-        ("Propagation delay mean (s)",   lambda r: _fmt(r["propagation_delay_mean_s"])),
-        ("Revocations @ 95% coverage",  lambda r: f"{r['revocations_reached_95pct']}/{r['total_revocations']}"),
-        ("False acceptance rate",        lambda r: f"{r['false_acceptance_rate']:.2%}"),
-        ("Total verifications",          lambda r: str(r["total_verifications"])),
-        ("Bandwidth/node mean (KB)",     lambda r: f"{r['bandwidth']['mean']/1024:.1f}"),
-        ("Bandwidth/node p95 (KB)",      lambda r: f"{r['bandwidth']['p95']/1024:.1f}"),
-        ("Bandwidth total (MB)",         lambda r: f"{r['bandwidth']['total']/1024**2:.1f}"),
-        ("Storage/node mean (KB)",       lambda r: f"{r['storage']['mean']/1024:.1f}"),
-        ("Storage/node max (KB)",        lambda r: f"{r['storage']['max']/1024:.1f}"),
+        ("Propagation delay p95 (s)",   lambda r: _fmt(r["propagation_delay_p95_s"])), #95 % procenti no mezgliem uzzin par jauniem datiem šī laika ietvaros. Sekundes
+        ("Propagation delay mean (s)",   lambda r: _fmt(r["propagation_delay_mean_s"])), # Vidējā aizture sekundēs , līdz brīdim, kad mezgls uzzina par izmaiņu sekundēs. Vidējais "aklums"
+        ("Revocations @ 95% coverage",  lambda r: f"{r['revocations_reached_95pct']}/{r['total_revocations']}"), # Cik mezgli uzzināja par revokācijām, kad 95% revokāciju bija izplatītas. Cik revokāciju sasniedza 95% mezglu.
+        ("False acceptance rate",        lambda r: f"{r['false_acceptance_rate']:.2%}"), # Cik procentu no revokācijas bija apstiprināti nekorekti. 
+        ("Total verifications",          lambda r: str(r["total_verifications"])), # Kopējo verifikāciju skaits
+        ("Bandwidth/node mean (KB)",     lambda r: f"{r['bandwidth']['mean']/1024:.1f}"), #Cik KB vidējs katrs mezgls lejuplādēja simulācijas laikā. 
+        ("Bandwidth/node p95 (KB)",      lambda r: f"{r['bandwidth']['p95']/1024:.1f}"), # Cik KB 95% mezglu lejuplādēja simulācijas laikā.
+        ("Bandwidth total (MB)",         lambda r: f"{r['bandwidth']['total']/1024**2:.1f}"), #Kopējais traffiks
+        ("Storage/node mean (KB)",       lambda r: f"{r['storage']['mean']/1024:.1f}"), # Vidējais katra mezgla uzglabāšanas apjoms KB
+        ("Storage/node max (KB)",        lambda r: f"{r['storage']['max']/1024:.1f}"), # Maksimālais katra mezgla uzglabāšanas apjoms KB
+        ("List age at verify mean (s)",  lambda r: _fmt(r["list_age"]["mean"])),  # Cik sena vidēji bija kešatmiņa verifikācijas brīdī
+        ("List age at verify min (s)",   lambda r: _fmt(r["list_age"]["min"])),   # Jaunākā kešatmiņa, ko mezgls izmantoja
+        ("List age at verify max (s)",   lambda r: _fmt(r["list_age"]["max"])),   # Vecākā kešatmiņa, ko mezgls izmantoja
     ]
+
+
+    #TODO 
+    # pievienot Pieejamības metriku, kas skaitās veiksmīgas verifikācijas/kopējais verifikāciju skaits, lai redzētu, vai kāda stratēģija ir jutīgāka pret offline mezgliem un vai tas ietekmē lietotāju pieredzi.
+    # Verifikācijas ilgumu
+    # Pie mixed stratēgijas pievienot vēl metriku "Obligāto tīkla verifikāciju", kas norādīs cik % verifikāciju bija jāveic tiešsaistē, lai redzētu, vai tas varētu būt labs kompromiss starp izplatīšanās ātrumu un tīkla slodzi.
+
 
     for label, fn in rows:
         print(f"{label:<36}" + "".join(f"{fn(r):>16}" for r in results))

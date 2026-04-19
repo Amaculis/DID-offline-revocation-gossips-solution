@@ -60,6 +60,19 @@ def bandwidth_per_node(stats: list[NodeStats]) -> dict[str, float]:
     }
 
 
+def list_age_at_verification(all_attempts: list[VerificationAttempt]) -> dict[str, float]:
+    """Age of the cached list (seconds) at the moment of each verification call."""
+    finite = [a.list_age for a in all_attempts if a.list_age != float("inf")]
+    if not finite:
+        return {"mean": float("inf"), "min": float("inf"), "max": float("inf")}
+    series = pd.Series(finite)
+    return {
+        "mean": series.mean(),
+        "min": series.min(),
+        "max": series.max(),
+    }
+
+
 def storage_per_node(stats: list[NodeStats]) -> dict[str, float]:
     values = [s.max_list_bytes for s in stats]
     series = pd.Series(values)
@@ -90,5 +103,6 @@ def summarize(
         "false_acceptance_rate": false_acceptance_rate(all_attempts),
         "bandwidth": bandwidth_per_node(stats),
         "storage": storage_per_node(stats),
+        "list_age": list_age_at_verification(all_attempts),
         "total_verifications": len(all_attempts),
     }
