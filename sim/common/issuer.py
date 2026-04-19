@@ -21,8 +21,8 @@ class Issuer:
 
         self._revoked: set[int] = set()
         self._version = 0
+        self._subscribers: list = []
         self._current_list: StatusList = self._publish()
-
         self.revocation_log: list[RevocationEvent] = []
         self.credentials = list(range(num_credentials))
 
@@ -36,6 +36,9 @@ class Issuer:
             issued_at=self.env.now,
             ttl=self.ttl,
         )
+    def register(self, node) -> None:
+        self._subscribers.append(node)
+        #self.notify_online(node)
 
     def _revoke_process(self):
         while True:
@@ -54,6 +57,16 @@ class Issuer:
         self.revocation_log.append(
             RevocationEvent(credential_id=cred, revoked_at=self.env.now)
         )
+        if self._subscribers:
+            self._push_to_online_nodes()
+
+    def _push_to_online_nodes(self) -> None:
+        #Šis attiecas tikai uz PUSH izplatīšanas debug.
+        #print(f"[DEBUG] t={self.env.now:.0f} pushing to {sum(1 for n in self._subscribers if n.is_online)} nodes")
+  
+        for node in self._subscribers:
+            if node.is_online:
+                node.receive_push(self._current_list)
 
     @property
     def current_list(self) -> StatusList:

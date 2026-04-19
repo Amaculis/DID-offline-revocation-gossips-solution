@@ -41,6 +41,7 @@ def run(
             rng=random.Random(rng.randint(0, 2**31)),
         )
         nodes.append(node)
+        issuer.register(node)
 
     env.run(until=sim_duration)
 
