@@ -1,8 +1,8 @@
 """Layer 2 — Unit tests for sim.metrics pure functions."""
 from __future__ import annotations
 import pytest
-from sim.models import VerificationAttempt, RevocationEvent
-from sim.metrics import false_acceptance_rate, propagation_delay
+from sim.common.models import VerificationAttempt, RevocationEvent
+from sim.common.metrics import false_acceptance_rate, propagation_delay
 
 
 # ---------------------------------------------------------------------------

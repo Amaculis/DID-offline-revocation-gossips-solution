@@ -2,8 +2,8 @@
 from __future__ import annotations
 import random
 import simpy
-from ..models import StatusList, VerificationAttempt, NodeStats
-from ..issuer import Issuer
+from ..common.models import StatusList, VerificationAttempt, NodeStats
+from ..common.issuer import Issuer
 
 
 # Cik bieži mezgls pārbauda, vai ir jāatjauno saraksts (sekundēs simulaācijas laikā)
