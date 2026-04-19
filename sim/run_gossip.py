@@ -52,7 +52,7 @@ def run(
     env.run(until=sim_duration)
 
     stats = [n.stats for n in nodes]
-    result = summarize(issuer.revocation_log, nodes, stats)
+    result = summarize(issuer.revocation_log, nodes, stats, ttl=ttl)
     result["strategy"] = "GOSSIP"
     result["network_size"] = network_size
     result["offline_ratio"] = offline_ratio

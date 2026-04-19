@@ -60,6 +60,18 @@ def bandwidth_per_node(stats: list[NodeStats]) -> dict[str, float]:
     }
 
 
+def expired_ttl_verification_rate(all_attempts: list[VerificationAttempt], ttl: float) -> dict[str, float]:
+    """Fraction of verifications performed with a list older than TTL."""
+    if not all_attempts:
+        return {"rate": 0.0, "count": 0, "total": 0}
+    expired = sum(1 for a in all_attempts if a.list_age > ttl)
+    return {
+        "rate": expired / len(all_attempts),
+        "count": expired,
+        "total": len(all_attempts),
+    }
+
+
 def list_age_at_verification(all_attempts: list[VerificationAttempt]) -> dict[str, float]:
     """Age of the cached list (seconds) at the moment of each verification call."""
     finite = [a.list_age for a in all_attempts if a.list_age != float("inf")]
@@ -86,6 +98,7 @@ def summarize(
     revocation_log: list[RevocationEvent],
     nodes: list,
     stats: list[NodeStats],
+    ttl: float = 3600.0,
 ) -> dict:
     all_attempts = [a for node in nodes for a in node.verification_log]
     delays = propagation_delay(revocation_log, nodes)
@@ -104,5 +117,6 @@ def summarize(
         "bandwidth": bandwidth_per_node(stats),
         "storage": storage_per_node(stats),
         "list_age": list_age_at_verification(all_attempts),
+        "expired_ttl_verifications": expired_ttl_verification_rate(all_attempts, ttl),
         "total_verifications": len(all_attempts),
     }

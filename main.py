@@ -41,6 +41,7 @@ def _print_comparison(results: list[dict]):
         ("Bandwidth total (MB)",         lambda r: f"{r['bandwidth']['total']/1024**2:.1f}"), #Kopējais traffiks
         ("Storage/node mean (KB)",       lambda r: f"{r['storage']['mean']/1024:.1f}"), # Vidējais katra mezgla uzglabāšanas apjoms KB
         ("Storage/node max (KB)",        lambda r: f"{r['storage']['max']/1024:.1f}"), # Maksimālais katra mezgla uzglabāšanas apjoms KB
+        ("Expired-TTL verifications",    lambda r: f"{r['expired_ttl_verifications']['rate']:.2%} ({r['expired_ttl_verifications']['count']}/{r['expired_ttl_verifications']['total']})"),
         ("List age at verify mean (s)",  lambda r: _fmt(r["list_age"]["mean"])),  # Cik sena vidēji bija kešatmiņa verifikācijas brīdī
         ("List age at verify min (s)",   lambda r: _fmt(r["list_age"]["min"])),   # Jaunākā kešatmiņa, ko mezgls izmantoja
         ("List age at verify max (s)",   lambda r: _fmt(r["list_age"]["max"])),   # Vecākā kešatmiņa, ko mezgls izmantoja
