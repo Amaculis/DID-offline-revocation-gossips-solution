@@ -15,6 +15,7 @@ class PushNode:
         rng: random.Random,
         mean_online_duration: float = 7200,   # 2h
         mean_offline_duration: float = 1800,  # 30min
+        is_dead: bool = False,
     ):
         self.node_id = node_id
         self.env = env
@@ -22,6 +23,7 @@ class PushNode:
         self.rng = rng
         self.mean_online = mean_online_duration
         self.mean_offline = mean_offline_duration
+        self.is_dead = is_dead
 
         self.is_online = is_online
         self.cached_list: StatusList | None = None
@@ -40,6 +42,8 @@ class PushNode:
     # Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem. Kad parādās online, tas tiek informēts par jaunāko StatusList, lai varētu salīdzināt versijas un izlemt, vai pieņemt jauno sarakstu.
     # ------------------------------------------------------------------
     def _connectivity_process(self):
+        if self.is_dead:
+            return  # permanently offline — never toggles
         while True:
             if self.is_online:
                 duration = self.rng.expovariate(1 / self.mean_online)

@@ -18,6 +18,7 @@ class GossipNode:
         mean_online_duration: float = 7200,   # 2h
         mean_offline_duration: float = 1800,  # 30min
         contact_rate: float = 1 / 600,        # vidējais laiks starp kontaktiem ar citiem mezgliem (sekundēs simulaācijas laikā)
+        is_dead: bool = False,
     ):
         self.node_id = node_id
         self.env = env
@@ -27,6 +28,7 @@ class GossipNode:
         self.mean_online = mean_online_duration
         self.mean_offline = mean_offline_duration
         self.contact_rate = contact_rate
+        self.is_dead = is_dead
 
         self.is_online = is_online
         self.cached_list: StatusList | None = None
@@ -62,6 +64,8 @@ class GossipNode:
     # Savienojamība vienāda ar Pull 
     # ------------------------------------------------------------------
     def _connectivity_process(self):
+        if self.is_dead:
+            return  # permanently offline — never toggles
         while True:
             if self.is_online:
                 duration = self.rng.expovariate(1 / self.mean_online)

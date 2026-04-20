@@ -18,8 +18,11 @@ def propagation_delay(
     """
 
     results = {}
-    total_nodes = len(nodes)
-    threshold = int(total_nodes * target_pct)
+    # Exclude permanently dead nodes from the denominator — they can never
+    # receive updates, so counting them would make 95% coverage impossible
+    # whenever dead_ratio >= (1 - target_pct).
+    reachable = sum(1 for n in nodes if not getattr(n, "is_dead", False))
+    threshold = max(1, int(reachable * target_pct))
 
     for event in revocation_log:
         cid = event.credential_id
@@ -100,6 +103,10 @@ def summarize(
     stats: list[NodeStats],
     ttl: float = 3600.0,
 ) -> dict:
+    #for debug 
+    active_nodes = sum(1 for n in nodes if len(n.verification_log) > 0)
+    print(f"Active verifiers: {active_nodes}/{len(nodes)}")
+    
     all_attempts = [a for node in nodes for a in node.verification_log]
     delays = propagation_delay(revocation_log, nodes)
     valid_delays = [d for d in delays.values() if d is not None]

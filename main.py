@@ -4,7 +4,8 @@ from sim.run_gossip import run as run_gossip
 
 PARAMS = dict(
     network_size=500,
-    offline_ratio=0.2,
+    offline_ratio=0.6, #0.2,
+    dead_ratio=0.1, #tie kas jau nekad nebūs online. 
     ttl=3600,
     revocation_rate=0.01,
     sim_duration=86400 * 7,
@@ -14,9 +15,9 @@ PARAMS = dict(
 
 def main():
     results = []
-    for label, runner in [#("PULL", run_pull) ,
+    for label, runner in [("PULL", run_pull) ,
                           ("PUSH", run_push), 
-                          #("GOSSIP", run_gossip)
+                          ("GOSSIP", run_gossip)
                           ]:
         print(f"Running {label} simulation ...")
         results.append(runner(**PARAMS))

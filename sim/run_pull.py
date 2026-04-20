@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 import simpy
 from .common.issuer import Issuer
-from .common.network import build_graph, assign_initial_states
+from .common.network import build_graph, assign_initial_states, assign_dead_nodes
 from .strategies.pull import PullNode
 from .common.metrics import summarize
 
@@ -10,6 +10,7 @@ from .common.metrics import summarize
 def run(
     network_size: int = 500,
     offline_ratio: float = 0.2,
+    dead_ratio: float = 0.0,
     ttl: float = 3600,
     revocation_rate: float = 0.01,
     sim_duration: float = 86400 * 7,
@@ -29,7 +30,8 @@ def run(
     )
 
     graph = build_graph(network_size, seed=seed)
-    online_states = assign_initial_states(network_size, offline_ratio, rng)
+    dead = assign_dead_nodes(network_size, dead_ratio, rng)
+    online_states = assign_initial_states(network_size, offline_ratio, rng, dead_nodes=dead)
 
     nodes: list[PullNode] = []
     for node_id in range(network_size):
@@ -40,6 +42,7 @@ def run(
             is_online=online_states[node_id],
             rng=random.Random(rng.randint(0, 2**31)),
             offline_ratio=offline_ratio,
+            is_dead=(node_id in dead),
         )
         nodes.append(node)
 
