@@ -1,5 +1,8 @@
 from __future__ import annotations
+from networkx import nodes
 import pandas as pd
+
+from sim.strategies.holder_gossip import HolderNode
 from .models import VerificationAttempt, NodeStats, RevocationEvent
 from .issuer import Issuer
 
@@ -110,6 +113,21 @@ def summarize(
     all_attempts = [a for node in nodes for a in node.verification_log]
     delays = propagation_delay(revocation_log, nodes)
     valid_delays = [d for d in delays.values() if d is not None]
+    verifiers = [n for n in nodes if not isinstance(n, HolderNode)]
+    holders = [n for n in nodes if isinstance(n, HolderNode)]
+    print(f"[DEBUG] verifiers={len(verifiers)} holders={len(holders)}")
+    delay_nodes = verifiers if holders else nodes
+    print(f"[DEBUG] delay_nodes={len(delay_nodes)}")
+
+    # Ja nav holderis (PULL/PUSH/GOSSIP) — skaitām pa visiem nodes
+    delay_nodes = verifiers if holders else nodes
+    delays = propagation_delay(revocation_log, delay_nodes)
+    
+    # Atsevišķi holderis ja ir
+    holder_delays = propagation_delay(revocation_log, holders) if holders else {}
+    holder_valid = [d for d in holder_delays.values() if d is not None]
+
+    print(f"[DEBUG] valid_delays count={len(valid_delays)}, mean={sum(valid_delays)/len(valid_delays) if valid_delays else None:.1f}")
 
     return {
         "propagation_delay_p95_s": (
@@ -117,6 +135,9 @@ def summarize(
         ),
         "propagation_delay_mean_s": (
             sum(valid_delays) / len(valid_delays) if valid_delays else None
+        ),
+        "holder_propagation_delay_mean_s": (
+            sum(holder_valid) / len(holder_valid) if holder_valid else None
         ),
         "revocations_reached_95pct": sum(1 for d in delays.values() if d is not None),
         "total_revocations": len(revocation_log),

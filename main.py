@@ -1,6 +1,7 @@
 from sim.run_pull import run as run_pull
 from sim.run_push import run as run_push
 from sim.run_gossip import run as run_gossip
+from sim.run_holder_gossip import run as run_holder_gossip
 
 PARAMS = dict(
     network_size=500,
@@ -15,9 +16,10 @@ PARAMS = dict(
 
 def main():
     results = []
-    for label, runner in [("PULL", run_pull) ,
-                          ("PUSH", run_push), 
-                          ("GOSSIP", run_gossip)
+    for label, runner in [("PULL", run_pull),
+                          ("PUSH", run_push),
+                          ("GOSSIP", run_gossip),
+                          ("HOLDER-GOSSIP", run_holder_gossip),
                           ]:
         print(f"Running {label} simulation ...")
         results.append(runner(**PARAMS))
@@ -34,6 +36,7 @@ def _print_comparison(results: list[dict]):
     rows = [
         ("Propagation delay p95 (s)",   lambda r: _fmt(r["propagation_delay_p95_s"])), #95 % procenti no mezgliem uzzin par jauniem datiem šī laika ietvaros. Sekundes
         ("Propagation delay mean (s)",   lambda r: _fmt(r["propagation_delay_mean_s"])), # Vidējā aizture sekundēs , līdz brīdim, kad mezgls uzzina par izmaiņu sekundēs. Vidējais "aklums"
+        ("Holder propagation delay mean (s)",   lambda r: _fmt(r["holder_propagation_delay_mean_s"])), # Vidējā aizture sekundēs holder mezgliem
         ("Revocations @ 95% coverage",  lambda r: f"{r['revocations_reached_95pct']}/{r['total_revocations']}"), # Cik mezgli uzzināja par revokācijām, kad 95% revokāciju bija izplatītas. Cik revokāciju sasniedza 95% mezglu.
         ("False acceptance rate",        lambda r: f"{r['false_acceptance_rate']:.2%}"), # Cik procentu no revokācijas bija apstiprināti nekorekti. 
         ("Total verifications",          lambda r: str(r["total_verifications"])), # Kopējo verifikāciju skaits
