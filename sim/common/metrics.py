@@ -1,10 +1,6 @@
 from __future__ import annotations
-from networkx import nodes
 import pandas as pd
-
-from sim.strategies.holder_gossip import HolderNode
 from .models import VerificationAttempt, NodeStats, RevocationEvent
-from .issuer import Issuer
 
 
 def propagation_delay(
@@ -106,28 +102,19 @@ def summarize(
     stats: list[NodeStats],
     ttl: float = 3600.0,
 ) -> dict:
-    #for debug 
-    active_nodes = sum(1 for n in nodes if len(n.verification_log) > 0)
-    print(f"Active verifiers: {active_nodes}/{len(nodes)}")
-    
     all_attempts = [a for node in nodes for a in node.verification_log]
-    delays = propagation_delay(revocation_log, nodes)
+
+    # For HOLDER-GOSSIP: propagation delay is measured separately for verifiers
+    # and holders. For all other strategies there are no HolderNodes, so
+    # verifier_nodes == nodes.
+    verifier_nodes = [n for n in nodes if not getattr(n, "is_holder", False)]
+    holder_nodes   = [n for n in nodes if getattr(n, "is_holder", False)]
+
+    delays = propagation_delay(revocation_log, verifier_nodes)
     valid_delays = [d for d in delays.values() if d is not None]
-    verifiers = [n for n in nodes if not isinstance(n, HolderNode)]
-    holders = [n for n in nodes if isinstance(n, HolderNode)]
-    print(f"[DEBUG] verifiers={len(verifiers)} holders={len(holders)}")
-    delay_nodes = verifiers if holders else nodes
-    print(f"[DEBUG] delay_nodes={len(delay_nodes)}")
 
-    # Ja nav holderis (PULL/PUSH/GOSSIP) — skaitām pa visiem nodes
-    delay_nodes = verifiers if holders else nodes
-    delays = propagation_delay(revocation_log, delay_nodes)
-    
-    # Atsevišķi holderis ja ir
-    holder_delays = propagation_delay(revocation_log, holders) if holders else {}
-    holder_valid = [d for d in holder_delays.values() if d is not None]
-
-    print(f"[DEBUG] valid_delays count={len(valid_delays)}, mean={sum(valid_delays)/len(valid_delays) if valid_delays else None:.1f}")
+    holder_delays = propagation_delay(revocation_log, holder_nodes) if holder_nodes else {}
+    holder_valid  = [d for d in holder_delays.values() if d is not None]
 
     return {
         "propagation_delay_p95_s": (

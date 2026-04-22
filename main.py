@@ -5,10 +5,10 @@ from sim.run_holder_gossip import run as run_holder_gossip
 
 PARAMS = dict(
     network_size=500,
-    offline_ratio=0.6, #0.2,
-    dead_ratio=0.1, #tie kas jau nekad nebūs online. 
+    offline_ratio=0.2,
+    dead_ratio=0.0, #tie kas jau nekad nebūs online. 
     ttl=3600,
-    revocation_rate=0.01,
+    revocation_rate=0.3,#0.01,
     sim_duration=86400 * 7,
     seed=42,
 )

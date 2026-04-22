@@ -233,6 +233,7 @@ class HolderNode:
         self.awareness_times: dict[int, float] = {}
 
         self.verifiers: list[HolderGossipNode] = []  # set by runner
+        self.is_holder = True  # marker for metrics — avoids circular import
 
         env.process(self._connectivity_process())
         env.process(self._presentation_process())
