@@ -8,9 +8,10 @@ PARAMS = dict(
     offline_ratio=0.2,
     dead_ratio=0.0, #tie kas jau nekad nebūs online. 
     ttl=3600,
-    revocation_rate=0.3,#0.01,
+    revocation_rate=0.01,
     sim_duration=86400 * 7,
     seed=42,
+    verificatior_ratio=0.7, # šis lai nobalansētu HOLDER-GOSSIP
 )
 
 

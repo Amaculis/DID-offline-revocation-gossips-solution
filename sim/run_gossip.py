@@ -16,11 +16,16 @@ def run(
     sim_duration: float = 86400 * 7,
     seed: int = 42,
     contact_rate: float = 1 / 600,
+    verificatior_ratio: float = 0.7, # šis lai nobalansētu HOLDER-GOSSIP
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
-
+    print(f"ver_rate = {verificatior_ratio}")
+    #network_size = int(network_size * verificatior_ratio)
+    print(f"network_size = {network_size}")
     num_credentials = network_size * 10
+
+    n_verifiers = int(network_size * verificatior_ratio)
 
     issuer = Issuer(
         env=env,
@@ -30,12 +35,12 @@ def run(
         rng=random.Random(rng.randint(0, 2**31)),
     )
 
-    graph = build_graph(network_size, seed=seed)
+    graph = build_graph(n_verifiers, seed=seed) #Aizvietots ar n_verifiers, lai balansētu holder-gossip
     dead = assign_dead_nodes(network_size, dead_ratio, rng)
     online_states = assign_initial_states(network_size, offline_ratio, rng, dead_nodes=dead)
 
     nodes: list[GossipNode] = []
-    for node_id in range(network_size):
+    for node_id in range(n_verifiers):
         node = GossipNode(
             node_id=node_id,
             env=env,

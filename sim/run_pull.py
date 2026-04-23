@@ -15,11 +15,14 @@ def run(
     revocation_rate: float = 0.01,
     sim_duration: float = 86400 * 7,
     seed: int = 42,
+    verificatior_ratio: float = 0.7, # šis lai nobalansētu HOLDER-GOSSIP
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
-
+    #network_size = int(network_size * verificatior_ratio)
+    print(f"ver_rate = {verificatior_ratio}")
     num_credentials = network_size * 10  # 10 credentials per node on average
+    n_verifiers = int(network_size * verificatior_ratio)
 
     issuer = Issuer(
         env=env,
@@ -29,12 +32,12 @@ def run(
         rng=random.Random(rng.randint(0, 2**31)),
     )
 
-    graph = build_graph(network_size, seed=seed)
-    dead = assign_dead_nodes(network_size, dead_ratio, rng)
-    online_states = assign_initial_states(network_size, offline_ratio, rng, dead_nodes=dead)
+    graph = build_graph(n_verifiers, seed=seed)
+    dead = assign_dead_nodes(n_verifiers, dead_ratio, rng)
+    online_states = assign_initial_states(n_verifiers, offline_ratio, rng, dead_nodes=dead)
 
     nodes: list[PullNode] = []
-    for node_id in range(network_size):
+    for node_id in range(n_verifiers):
         node = PullNode(
             node_id=node_id,
             env=env,
