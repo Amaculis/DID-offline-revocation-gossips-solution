@@ -35,7 +35,7 @@ class GossipNode:
         self.stats = NodeStats(node_id=node_id)
         self.verification_log: list[VerificationAttempt] = []
         self.awareness_times: dict[int, float] = {}
-
+    
         # Pēc node izveides, simulaācijas izpildītājs piepilda šo sarakstu ar atsaucēm uz kaimiņu mezgliem, pamatojoties uz grafu topoloģiju.
         self.peers: list[GossipNode] = []
 

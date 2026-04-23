@@ -87,9 +87,10 @@ def run(
 
     # Wire each holder to a random local neighbourhood of verifiers (~6 neighbours)
     for holder in holders:
-        k = min(6, len(verifiers))
-        holder.verifiers = rng.sample(verifiers, k)
-
+        #k = min(6, len(verifiers))
+        #holder.verifiers = rng.sample(verifiers, k)
+        holder.verifiers = verifiers
+        
     all_nodes = verifiers + holders
     env.run(until=sim_duration)
 

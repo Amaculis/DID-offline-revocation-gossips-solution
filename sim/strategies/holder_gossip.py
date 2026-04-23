@@ -260,6 +260,7 @@ class HolderNode:
 
             if not self.is_online or not self.verifiers:
                 continue
+            #verifier = self.rng.choice(self.verifiers)
             verifier = self.rng.choice(self.verifiers)
             if not verifier.is_online:
                 continue
