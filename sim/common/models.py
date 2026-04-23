@@ -32,6 +32,7 @@ class VerificationAttempt:
     was_revoked: bool        # ground truth at time of check
     node_knew: bool          # did the node's list include this revocation
     list_age: float          # how old was the cached list (seconds)
+    is_presentation: bool = False  # True when logged via holder credential presentation
 
 
 @dataclass

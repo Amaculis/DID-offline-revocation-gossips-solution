@@ -19,17 +19,9 @@ def run(
     contact_rate: float = 1 / 600,
     holder_ratio: float = 0.3,
     mean_presentation_interval: float = 7200,
-    verificatior_ratio: float = 0.7,
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
-    
-    if holder_ratio + verificatior_ratio != 1.0:
-        raise ValueError("ERRROR! Nav sabalansētas stratēģijas! ")
-    
-    #n_verifiers = int(network_size * verificatior_ratio)
-    #network_size = int(network_size * verificatior_ratio)
-    print(f"ver_rate = {verificatior_ratio}")
     num_credentials = network_size * 10
 
     issuer = Issuer(
@@ -40,8 +32,8 @@ def run(
         rng=random.Random(rng.randint(0, 2**31)),
     )
 
-    n_verifiers = int(network_size * (1 - holder_ratio))
-    n_holders = network_size - n_verifiers
+    n_verifiers = network_size
+    n_holders = int(network_size * holder_ratio)
 
     # Topology and initial states for verifiers
     graph = build_graph(n_verifiers, seed=seed)

@@ -103,6 +103,8 @@ def summarize(
     ttl: float = 3600.0,
 ) -> dict:
     all_attempts = [a for node in nodes for a in node.verification_log]
+    regular_attempts = [a for a in all_attempts if not a.is_presentation]
+    presentation_attempts = [a for a in all_attempts if a.is_presentation]
 
     # For HOLDER-GOSSIP: propagation delay is measured separately for verifiers
     # and holders. For all other strategies there are no HolderNodes, so
@@ -128,10 +130,12 @@ def summarize(
         ),
         "revocations_reached_95pct": sum(1 for d in delays.values() if d is not None),
         "total_revocations": len(revocation_log),
-        "false_acceptance_rate": false_acceptance_rate(all_attempts),
+        "false_acceptance_rate": false_acceptance_rate(regular_attempts),
         "bandwidth": bandwidth_per_node(stats),
         "storage": storage_per_node(stats),
-        "list_age": list_age_at_verification(all_attempts),
-        "expired_ttl_verifications": expired_ttl_verification_rate(all_attempts, ttl),
-        "total_verifications": len(all_attempts),
+        "list_age": list_age_at_verification(regular_attempts),
+        "expired_ttl_verifications": expired_ttl_verification_rate(regular_attempts, ttl),
+        "total_verifications": len(regular_attempts),
+        "presentation_false_acceptance_rate": false_acceptance_rate(presentation_attempts),
+        "presentation_count": len(presentation_attempts),
     }

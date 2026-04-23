@@ -175,7 +175,24 @@ class HolderGossipNode:
         if not self.issuer.credentials:
             return
         cred_id = self.rng.choice(self.issuer.credentials)
-        self._log_verification(cred_id)
+        ground_truth = self.issuer.is_revoked(cred_id)
+        if self.cached_list is None:
+            node_knew = False
+            list_age = float("inf")
+        else:
+            node_knew = cred_id in self.cached_list.revoked_ids
+            list_age = self.env.now - self.cached_list.issued_at
+        self.verification_log.append(
+            VerificationAttempt(
+                node_id=self.node_id,
+                credential_id=cred_id,
+                sim_time=self.env.now,
+                was_revoked=ground_truth,
+                node_knew=node_knew,
+                list_age=list_age,
+                is_presentation=True,
+            )
+        )
 
     def _log_verification(self, cred_id: int):
         ground_truth = self.issuer.is_revoked(cred_id)

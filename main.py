@@ -11,7 +11,6 @@ PARAMS = dict(
     revocation_rate=0.01,
     sim_duration=86400 * 7,
     seed=42,
-    verificatior_ratio=0.7, # šis lai nobalansētu HOLDER-GOSSIP
 )
 
 
@@ -50,6 +49,8 @@ def _print_comparison(results: list[dict]):
         ("List age at verify mean (s)",  lambda r: _fmt(r["list_age"]["mean"])),  # Cik sena vidēji bija kešatmiņa verifikācijas brīdī
         ("List age at verify min (s)",   lambda r: _fmt(r["list_age"]["min"])),   # Jaunākā kešatmiņa, ko mezgls izmantoja
         ("List age at verify max (s)",   lambda r: _fmt(r["list_age"]["max"])),   # Vecākā kešatmiņa, ko mezgls izmantoja
+        ("Presentation verifications",   lambda r: str(r["presentation_count"])),  # Verifikācijas, kas notika prezentācijas laikā (tikai HOLDER-GOSSIP)
+        ("Presentation FAR",             lambda r: f"{r['presentation_false_acceptance_rate']:.2%}"),  # Prezentācijas verifikāciju kļūdu līmenis
     ]
 
 
