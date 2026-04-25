@@ -7,6 +7,7 @@ def propagation_delay(
     revocation_log: list[RevocationEvent],
     nodes: list,  # list of PullNode (or any strategy node)
     target_pct: float = 0.95,
+    exclude_dead: bool = False,
 ) -> dict[int, float | None]:
     """
     Katram revokācijas notikumam atrod laiku, 
@@ -17,10 +18,7 @@ def propagation_delay(
     """
 
     results = {}
-    # Exclude permanently dead nodes from the denominator — they can never
-    # receive updates, so counting them would make 95% coverage impossible
-    # whenever dead_ratio >= (1 - target_pct).
-    reachable = sum(1 for n in nodes if not getattr(n, "is_dead", False))
+    reachable = sum(1 for n in nodes if not (exclude_dead and getattr(n, "is_dead", False)))
     threshold = max(1, int(reachable * target_pct))
 
     for event in revocation_log:
