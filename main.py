@@ -7,7 +7,7 @@ from sim.run_push_holder_gossip import run as run_push_holder_gossip
 PARAMS = dict(
     network_size=500,
     offline_ratio=0.2,
-    dead_ratio=0.1, #tie kas jau nekad nebūs online. 
+    dead_ratio=0.7, #tie kas jau nekad nebūs online. 
     ttl=28800,#3600,
     revocation_rate=0.01,
     sim_duration=86400 * 7,
