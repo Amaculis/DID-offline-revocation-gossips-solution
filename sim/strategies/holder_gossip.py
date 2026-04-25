@@ -31,8 +31,8 @@ class HolderGossipNode:
         is_online: bool,
         rng: random.Random,
         offline_ratio: float,
-        mean_online_duration: float = 7200,
-        mean_offline_duration: float = 1800,
+        mean_online_duration: float = 3600,   # 1h
+        mean_offline_duration: float = 14400,  # 4h
         contact_rate: float = 1 / 600,
         is_dead: bool = False,
     ):
@@ -63,6 +63,8 @@ class HolderGossipNode:
         env.process(self._verify_process())
 
     def _initial_fetch(self):
+        if self.is_dead:
+            return  # dead nodes have no issuer access
         fresh = self.issuer.current_list
         self.cached_list = fresh
         size = fresh.byte_size()
@@ -73,8 +75,6 @@ class HolderGossipNode:
             self.awareness_times.setdefault(cid, self.env.now)
 
     def _connectivity_process(self):
-        if self.is_dead:
-            return
         while True:
             if self.is_online:
                 duration = self.rng.expovariate(1 / self.mean_online)
@@ -88,7 +88,7 @@ class HolderGossipNode:
     def _refresh_process(self):
         while True:
             yield self.env.timeout(self._REFRESH_CHECK)
-            if not self.is_online:
+            if not self.is_online or self.is_dead:
                 continue
             if self.cached_list is None or self.cached_list.is_expired(self.env.now):
                 self._fetch_from_issuer()
@@ -120,6 +120,7 @@ class HolderGossipNode:
             peer: HolderGossipNode = self.rng.choice(self.peers)
             if not peer.is_online:
                 continue
+
 
             self_ver = self.cached_list.version if self.cached_list else -1
             peer_ver = peer.cached_list.version if peer.cached_list else -1
@@ -162,6 +163,8 @@ class HolderGossipNode:
         while True:
             delay = self.rng.expovariate(1 / mean_verify_interval)
             yield self.env.timeout(delay)
+            #if self.is_online:
+            #    self._do_verify()
             self._do_verify()
 
     def _do_verify(self):
@@ -229,8 +232,8 @@ class HolderNode:
         issuer: Issuer,
         is_online: bool,
         rng: random.Random,
-        mean_online_duration: float = 7200,
-        mean_offline_duration: float = 1800,
+        mean_online_duration: float = 3600,   # 1h
+        mean_offline_duration: float = 14400,  # 4h
         mean_presentation_interval: float = 7200,  # present credential every ~2h
         is_dead: bool = False,
     ):
@@ -256,8 +259,6 @@ class HolderNode:
         env.process(self._presentation_process())
 
     def _connectivity_process(self):
-        if self.is_dead:
-            return
         while True:
             if self.is_online:
                 duration = self.rng.expovariate(1 / self.mean_online)
@@ -269,8 +270,6 @@ class HolderNode:
                 self.is_online = True
 
     def _presentation_process(self):
-        if self.is_dead:
-            return
         while True:
             delay = self.rng.expovariate(1 / self.mean_presentation_interval)
             yield self.env.timeout(delay)

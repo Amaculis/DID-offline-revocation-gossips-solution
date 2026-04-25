@@ -20,8 +20,8 @@ class PullNode:
         rng: random.Random,
         offline_ratio: float,
         # vidējais laiks online / offline, kas tiek zīmēts no eksponenciālām sadalījumiem
-        mean_online_duration: float = 7200,   # 2h
-        mean_offline_duration: float = 1800,  # 30min
+        mean_online_duration: float = 3600,   # 1h
+        mean_offline_duration: float = 14400,  # 4h
         is_dead: bool = False,
     ):
         self.node_id = node_id
@@ -46,8 +46,6 @@ class PullNode:
     # Connectivity: Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem
     # ------------------------------------------------------------------
     def _connectivity_process(self):
-        if self.is_dead:
-            return  # permanently offline — never toggles
         while True:
             if self.is_online:
                 duration = self.rng.expovariate(1 / self.mean_online)
@@ -70,7 +68,7 @@ class PullNode:
                 continue
 
             # Online — pārbauda, vai kešatmiņa ir novecojusi vai trūkst, un ja jā, tad atjauno
-            if self.cached_list is None or self.cached_list.is_expired(self.env.now):
+            if not self.is_dead and (self.cached_list is None or self.cached_list.is_expired(self.env.now)):
                 self._fetch()
 
     def _fetch(self):
@@ -90,6 +88,8 @@ class PullNode:
         while True:
             delay = self.rng.expovariate(1 / mean_verify_interval)
             yield self.env.timeout(delay)
+            #if self.is_online:
+            #    self._do_verify()
             self._do_verify()
 
     def _do_verify(self):

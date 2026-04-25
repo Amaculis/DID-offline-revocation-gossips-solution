@@ -15,8 +15,8 @@ class GossipNode:
         is_online: bool,
         rng: random.Random,
         offline_ratio: float,
-        mean_online_duration: float = 7200,   # 2h
-        mean_offline_duration: float = 1800,  # 30min
+        mean_online_duration: float = 3600,   # 1h
+        mean_offline_duration: float = 14400,  # 4h
         contact_rate: float = 1 / 600,        # vidējais laiks starp kontaktiem ar citiem mezgliem (sekundēs simulaācijas laikā)
         is_dead: bool = False,
     ):
@@ -51,6 +51,8 @@ class GossipNode:
     # Paņem sākotnējo sarakstu no izdevēja, lai versiju salīdzināšana darbotos. Šis fetch tiek veikts bez apmaksas, jo tas ir nepieciešams, lai nodrošinātu, ka vismaz viens mezgls sāk ar jaunāko sarakstu, un tāpēc var izplatīt to pārējiem caur gossip.
     # ------------------------------------------------------------------
     def _initial_fetch(self):
+        if self.is_dead:
+            return  # dead nodes have no issuer access
         fresh = self.issuer.current_list
         self.cached_list = fresh
         bytes_rx = fresh.byte_size()
@@ -64,8 +66,6 @@ class GossipNode:
     # Savienojamība vienāda ar Pull 
     # ------------------------------------------------------------------
     def _connectivity_process(self):
-        if self.is_dead:
-            return  # permanently offline — never toggles
         while True:
             if self.is_online:
                 duration = self.rng.expovariate(1 / self.mean_online)
@@ -90,7 +90,7 @@ class GossipNode:
     def _refresh_process(self):
         while True:
             yield self.env.timeout(self._REFRESH_CHECK)
-            if not self.is_online:
+            if not self.is_online or self.is_dead:
                 continue
             if self.cached_list is None or self.cached_list.is_expired(self.env.now):
                 self._fetch_from_issuer()
@@ -129,7 +129,7 @@ class GossipNode:
                 continue
 
             peer: GossipNode = self.rng.choice(self.peers)
-            if not peer.is_online and not peer.is_dead:
+            if not peer.is_online:
                 continue
 
             # salīdzina versijas, lai pārbaudītu saraksta derīgumu un izvairītos no saņemšanas vai izplatīšanas vecāku sarakstu (kas varētu būt ļaunprātīgi vai vienkārši nevēlamas novecojušas informācijas avots).
@@ -177,8 +177,9 @@ class GossipNode:
         while True:
             delay = self.rng.expovariate(1 / mean_verify_interval)
             yield self.env.timeout(delay)
+            #if self.is_online:
+            #    self._do_verify()
             self._do_verify()
-
     def _do_verify(self):
         if not self.issuer.credentials:
             return

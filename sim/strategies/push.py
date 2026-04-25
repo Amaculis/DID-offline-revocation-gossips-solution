@@ -13,8 +13,8 @@ class PushNode:
         issuer: Issuer,
         is_online: bool,
         rng: random.Random,
-        mean_online_duration: float = 7200,   # 2h
-        mean_offline_duration: float = 1800,  # 30min
+        mean_online_duration: float = 3600,   # 1h
+        mean_offline_duration: float = 14400,  # 4h
         is_dead: bool = False,
     ):
         self.node_id = node_id
@@ -34,16 +34,14 @@ class PushNode:
         env.process(self._connectivity_process())
         env.process(self._verify_process())
 
-        # Ja sākotnēji ir tiešsaistē, saņem uzreiz push
-        if is_online:
+        # Ja sākotnēji ir tiešsaistē, saņem uzreiz push (tikai ja nav dead)
+        if is_online and not is_dead:
             issuer.notify_online(self)
 
     # ------------------------------------------------------------------
     # Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem. Kad parādās online, tas tiek informēts par jaunāko StatusList, lai varētu salīdzināt versijas un izlemt, vai pieņemt jauno sarakstu.
     # ------------------------------------------------------------------
     def _connectivity_process(self):
-        if self.is_dead:
-            return  # permanently offline — never toggles
         while True:
             if self.is_online:
                 duration = self.rng.expovariate(1 / self.mean_online)
@@ -53,9 +51,10 @@ class PushNode:
                 duration = self.rng.expovariate(1 / self.mean_offline)
                 yield self.env.timeout(duration)
                 self.is_online = True
-                
-                # Node tikko parādījās online — izdevējs tūlītēji push
-                self.issuer.notify_online(self)
+
+                # Node tikko parādījās online — izdevējs tūlītēji push (tikai ja nav dead)
+                if not self.is_dead:
+                    self.issuer.notify_online(self)
 
     # ------------------------------------------------------------------
     # Saņem push no izdevēja
@@ -90,6 +89,8 @@ class PushNode:
         while True:
             delay = self.rng.expovariate(1 / mean_verify_interval)
             yield self.env.timeout(delay)
+            #if self.is_online:
+            #    self._do_verify()
             self._do_verify()
 
     def _do_verify(self):
