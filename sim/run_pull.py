@@ -15,6 +15,8 @@ def run(
     revocation_rate: float = 0.01,
     sim_duration: float = 86400 * 7,
     seed: int = 42,
+    mean_online_duration: float = 3600,
+    mean_offline_duration: float = 14400,
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
@@ -41,6 +43,8 @@ def run(
             is_online=online_states[node_id],
             rng=random.Random(rng.randint(0, 2**31)),
             offline_ratio=offline_ratio,
+            mean_online_duration=mean_online_duration,
+            mean_offline_duration=mean_offline_duration,
             is_dead=(node_id in dead),
         )
         nodes.append(node)

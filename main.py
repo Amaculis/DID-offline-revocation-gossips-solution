@@ -11,6 +11,8 @@ PARAMS = dict(
     revocation_rate=0.01,
     sim_duration=86400 * 7,
     seed=42,
+    mean_online_duration=3600,   # 1h
+    mean_offline_duration=14400, # 4h
 )
 
 

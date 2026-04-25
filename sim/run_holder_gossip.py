@@ -19,6 +19,8 @@ def run(
     contact_rate: float = 1 / 600,
     holder_ratio: float = 0.3,
     mean_presentation_interval: float = 7200,
+    mean_online_duration: float = 3600,
+    mean_offline_duration: float = 14400,
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
@@ -54,6 +56,8 @@ def run(
             is_online=verifier_online[vid],
             rng=random.Random(rng.randint(0, 2**31)),
             offline_ratio=offline_ratio,
+            mean_online_duration=mean_online_duration,
+            mean_offline_duration=mean_offline_duration,
             contact_rate=contact_rate,
             is_dead=(vid in dead_verifiers),
         )
@@ -72,6 +76,8 @@ def run(
             issuer=issuer,
             is_online=holder_online[hid],
             rng=random.Random(rng.randint(0, 2**31)),
+            mean_online_duration=mean_online_duration,
+            mean_offline_duration=mean_offline_duration,
             mean_presentation_interval=mean_presentation_interval,
             is_dead=(hid in dead_holders),
         )
