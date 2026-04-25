@@ -129,7 +129,7 @@ class GossipNode:
                 continue
 
             peer: GossipNode = self.rng.choice(self.peers)
-            if not peer.is_online:
+            if not peer.is_online and not peer.is_dead:
                 continue
 
             # salīdzina versijas, lai pārbaudītu saraksta derīgumu un izvairītos no saņemšanas vai izplatīšanas vecāku sarakstu (kas varētu būt ļaunprātīgi vai vienkārši nevēlamas novecojušas informācijas avots).

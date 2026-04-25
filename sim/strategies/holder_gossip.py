@@ -118,7 +118,7 @@ class HolderGossipNode:
                 continue
 
             peer: HolderGossipNode = self.rng.choice(self.peers)
-            if not peer.is_online:
+            if not peer.is_online and not peer.is_dead:
                 continue
 
 

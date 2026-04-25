@@ -117,7 +117,7 @@ class PushHolderGossipNode:
                 continue
 
             peer: PushHolderGossipNode = self.rng.choice(self.peers)
-            if not peer.is_online:
+            if not peer.is_online and not peer.is_dead:
                 continue
 
             self_ver = self.cached_list.version if self.cached_list else -1
