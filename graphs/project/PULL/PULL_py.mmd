@@ -1,0 +1,18 @@
+sequenceDiagram
+participant N as PullNode
+participant I as Izdevējs
+participant V as Verifikācijas žurnāls
+loop Katras 300s
+    N->>N: gaida 300s
+    N->>N: tiešsaistē? <br> lokālais saraksts beidzies?
+    N->>I: pieprasīt aktuālo sarakstu
+    I-->>N: StatusList (parakstīts)
+    N->>N: atjaunot kešatmiņu
+end
+
+loop Expo(~3600s)
+    N->>N: pārbauda lokālo sarakstu
+    N->>I: ir_atsaukts (cred_id)
+    I-->>N: patiesais statuss
+    N->>V: VerifikācijasIeraksts
+end
