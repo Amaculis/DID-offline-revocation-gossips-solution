@@ -11,8 +11,6 @@ from ..common.issuer import Issuer
 
 class PushHolderGossipNode:
 
-    _REFRESH_CHECK = 300  # seconds between TTL-expiry checks (fallback pull)
-
     def __init__(
         self,
         node_id: int,
@@ -53,7 +51,6 @@ class PushHolderGossipNode:
             issuer.notify_online(self)
 
         env.process(self._connectivity_process())
-        env.process(self._refresh_process())
         env.process(self._gossip_process())
         env.process(self._verify_process())
 
@@ -82,28 +79,6 @@ class PushHolderGossipNode:
                 # Ja sākotnēji ir tiešsaistē, saņem uzreiz push (tikai ja nav dead)
                 if not self.is_dead:
                     self.issuer.notify_online(self)
-
-    def _refresh_process(self):
-        #Atkārtoti pārbauda, vai saraksts ir novecojis, un ja jā, tad atjauno to no izdevēja. Tas kalpo kā rezerves mehānisms, lai nodrošinātu, ka mezgls galu galā saņem jaunu sarakstu, pat ja push tika palaists garām (piemēram, ja mezgls bija offline īsi pirms push un palika offline īsi pēc push).
-        while True:
-            yield self.env.timeout(self._REFRESH_CHECK)
-            if not self.is_online or self.is_dead:
-                continue
-            if self.cached_list is None or self.cached_list.is_expired(self.env.now):
-                self._fetch_from_issuer()
-
-    def _fetch_from_issuer(self):
-        fresh = self.issuer.current_list
-        if fresh.version <= (self.cached_list.version if self.cached_list else -1):
-            return
-        prev_revoked = set(self.cached_list.revoked_ids) if self.cached_list else set()
-        self.cached_list = fresh
-        size = fresh.byte_size()
-        self.stats.bytes_transferred += size
-        self.stats.fetch_count += 1
-        self.stats.max_list_bytes = max(self.stats.max_list_bytes, size)
-        for cid in set(fresh.revoked_ids) - prev_revoked:
-            self.awareness_times.setdefault(cid, self.env.now)
 
     def _gossip_process(self):
         while True:
