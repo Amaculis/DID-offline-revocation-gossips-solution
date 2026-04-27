@@ -19,6 +19,7 @@ class GossipNode:
         mean_offline_duration: float = 14400,  # 4h
         contact_rate: float = 1 / 600,        # vidējais laiks starp kontaktiem ar citiem mezgliem (sekundēs simulaācijas laikā)
         is_dead: bool = False,
+        is_seed: bool = False,  # seed nodes have direct Issuer access; others rely solely on gossip
     ):
         self.node_id = node_id
         self.env = env
@@ -29,6 +30,7 @@ class GossipNode:
         self.mean_offline = mean_offline_duration
         self.contact_rate = contact_rate
         self.is_dead = is_dead
+        self.is_seed = is_seed
 
         self.is_online = is_online
         self.cached_list: StatusList | None = None
@@ -43,7 +45,8 @@ class GossipNode:
         self._initial_fetch()
 
         env.process(self._connectivity_process())
-        env.process(self._refresh_process())
+        if self.is_seed:
+            env.process(self._refresh_process())
         env.process(self._gossip_process())
         env.process(self._verify_process())
 
@@ -51,8 +54,8 @@ class GossipNode:
     # Paņem sākotnējo sarakstu no izdevēja, lai versiju salīdzināšana darbotos. Šis fetch tiek veikts bez apmaksas, jo tas ir nepieciešams, lai nodrošinātu, ka vismaz viens mezgls sāk ar jaunāko sarakstu, un tāpēc var izplatīt to pārējiem caur gossip.
     # ------------------------------------------------------------------
     def _initial_fetch(self):
-        if self.is_dead:
-            return  # dead nodes have no issuer access
+        if self.is_dead or not self.is_seed:
+            return  # only seed nodes fetch from issuer
         fresh = self.issuer.current_list
         self.cached_list = fresh
         bytes_rx = fresh.byte_size()

@@ -18,6 +18,7 @@ def run(
     contact_rate: float = 1 / 600,
     mean_online_duration: float = 3600,
     mean_offline_duration: float = 14400,
+    seed_ratio: float = 0.15,  # fraction of nodes with direct Issuer access
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
@@ -35,6 +36,7 @@ def run(
     dead = assign_dead_nodes(network_size, dead_ratio, rng)
     online_states = assign_initial_states(network_size, offline_ratio, rng, dead_nodes=dead)
 
+    n_seeds = max(1, int(network_size * seed_ratio))
     nodes: list[GossipNode] = []
     for node_id in range(network_size):
         node = GossipNode(
@@ -48,6 +50,7 @@ def run(
             mean_offline_duration=mean_offline_duration,
             contact_rate=contact_rate,
             is_dead=(node_id in dead),
+            is_seed=(node_id < n_seeds),
         )
         nodes.append(node)
 
