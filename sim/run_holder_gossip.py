@@ -21,6 +21,7 @@ def run(
     mean_presentation_interval: float = 7200,
     mean_online_duration: float = 3600,
     mean_offline_duration: float = 14400,
+    seed_ratio: float = 0.15,
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
@@ -46,6 +47,7 @@ def run(
     verifier_online = assign_initial_states(n_verifiers, offline_ratio, rng, dead_nodes=dead_verifiers)
     holder_online = assign_initial_states(n_holders, offline_ratio, rng, dead_nodes=dead_holders)
 
+    n_seeds = max(1, int(n_verifiers * seed_ratio))
     # Create verifiers
     verifiers: list[HolderGossipNode] = []
     for vid in range(n_verifiers):
@@ -60,6 +62,7 @@ def run(
             mean_offline_duration=mean_offline_duration,
             contact_rate=contact_rate,
             is_dead=(vid in dead_verifiers),
+            is_seed=(vid < n_seeds),
         )
         verifiers.append(node)
 

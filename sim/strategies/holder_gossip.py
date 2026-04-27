@@ -35,6 +35,7 @@ class HolderGossipNode:
         mean_offline_duration: float = 14400,  # 4h
         contact_rate: float = 1 / 600,
         is_dead: bool = False,
+        is_seed: bool = False,  # seed nodes have direct Issuer access; others rely solely on gossip/holder exchange
     ):
         self.node_id = node_id
         self.env = env
@@ -45,6 +46,7 @@ class HolderGossipNode:
         self.mean_offline = mean_offline_duration
         self.contact_rate = contact_rate
         self.is_dead = is_dead
+        self.is_seed = is_seed
 
         self.is_online = is_online
         self.cached_list: StatusList | None = None
@@ -58,13 +60,14 @@ class HolderGossipNode:
         self._initial_fetch()
 
         env.process(self._connectivity_process())
-        env.process(self._refresh_process())
+        if self.is_seed:
+            env.process(self._refresh_process())
         env.process(self._gossip_process())
         env.process(self._verify_process())
 
     def _initial_fetch(self):
-        if self.is_dead:
-            return  # dead nodes have no issuer access
+        if self.is_dead or not self.is_seed:
+            return  # only seed nodes fetch from issuer
         fresh = self.issuer.current_list
         self.cached_list = fresh
         size = fresh.byte_size()
