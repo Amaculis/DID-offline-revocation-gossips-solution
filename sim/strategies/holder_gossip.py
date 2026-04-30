@@ -114,14 +114,15 @@ class HolderGossipNode:
             delay = self.rng.expovariate(self.contact_rate)
             yield self.env.timeout(delay)
 
-            if not self.is_online:
-                self.stats.stale_hits += 1
-                continue
+            #if not self.is_online:
+            #    self.stats.stale_hits += 1
+            #    continue
             if not self.peers:
                 continue
 
             peer: HolderGossipNode = self.rng.choice(self.peers)
-            if not peer.is_online and not peer.is_dead:
+            #if not peer.is_online and not peer.is_dead:
+            if peer.is_dead:
                 continue
 
 
@@ -141,11 +142,9 @@ class HolderGossipNode:
         self._absorb(new_list)
 
     def receive_holder_list(self, new_list: StatusList) -> None:
-        """Accept a list pushed by a holder during credential presentation."""
         self._absorb(new_list)
 
     def _absorb(self, new_list: StatusList) -> None:
-        """Common acceptance logic for gossip and holder-push."""
         if new_list is None:
             return
         current_ver = self.cached_list.version if self.cached_list else -1
@@ -177,7 +176,6 @@ class HolderGossipNode:
         self._log_verification(cred_id)
 
     def _do_verify_holder(self, holder: HolderNode):
-        """Log a verification triggered by a holder presentation."""
         if not self.issuer.credentials:
             return
         cred_id = self.rng.choice(self.issuer.credentials)
@@ -225,8 +223,6 @@ class HolderGossipNode:
 # ---------------------------------------------------------------------------
 
 class HolderNode:
-    """Credential holder — cannot reach the Issuer; gets StatusList only via
-    presentation exchanges with verifiers."""
 
     def __init__(
         self,
@@ -277,18 +273,17 @@ class HolderNode:
             delay = self.rng.expovariate(1 / self.mean_presentation_interval)
             yield self.env.timeout(delay)
 
-            if not self.is_online or not self.verifiers:
+            if not self.verifiers:
                 continue
             #verifier = self.rng.choice(self.verifiers)
             verifier = self.rng.choice(self.verifiers)
-            if not verifier.is_online:
-                continue
+            #if not verifier.is_online:
+            #    continue
 
             self._exchange_list(verifier)
             verifier._do_verify_holder(self)
 
     def _exchange_list(self, verifier: HolderGossipNode):
-        """Bidirectional version swap. Holder only sends non-expired lists."""
         holder_ver = self.cached_list.version if self.cached_list else -1
         verifier_ver = verifier.cached_list.version if verifier.cached_list else -1
 
@@ -305,7 +300,6 @@ class HolderNode:
                 self._accept_list(verifier.cached_list)
 
     def _accept_list(self, new_list: StatusList):
-        """Passively accept a newer list from a verifier."""
         current_ver = self.cached_list.version if self.cached_list else -1
         if new_list.version <= current_ver:
             return

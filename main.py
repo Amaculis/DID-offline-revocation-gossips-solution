@@ -3,11 +3,12 @@ from sim.run_push import run as run_push
 from sim.run_gossip import run as run_gossip
 from sim.run_holder_gossip import run as run_holder_gossip
 from sim.run_push_holder_gossip import run as run_push_holder_gossip
+from sim.run_verification_gossip import run as run_verification_gossip
 
 PARAMS = dict(
     network_size=500,
     offline_ratio=0.2,
-    dead_ratio=0.01, #tie kas jau nekad nebūs online. 
+    dead_ratio=0.71, #tie kas jau nekad nebūs online. 
     ttl=28800,#3600,
     revocation_rate=0.01,
     sim_duration=86400 * 7,
@@ -21,9 +22,10 @@ def main():
     results = []
     for label, runner in [("PULL", run_pull),
                           ("PUSH", run_push),
-                          ("GOSSIP", run_gossip),
+                          #("GOSSIP", run_gossip),
                           ("HOLDER-GOSSIP", run_holder_gossip),
                           ("PUSH-HOLDER-GOSSIP", run_push_holder_gossip),
+                          #("VERIF-GOSSIP", run_verification_gossip),
                           ]:
         print(f"Running {label} simulation ...")
         results.append(runner(**PARAMS))

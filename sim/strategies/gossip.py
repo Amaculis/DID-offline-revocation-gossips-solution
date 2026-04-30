@@ -112,7 +112,7 @@ class GossipNode:
             self.awareness_times.setdefault(cid, self.env.now)
 
     # ------------------------------------------------------------------
-    # Nejauši satiekoties, ja abi ir online, 
+    # Nejauši satiekoties,
     # salīdzina sarakstu versijas un pārsūta jaunāko uz otru pusi. 
     # Ja viens no mezgliem ir offline, 
     # tad nav nekādas mijiedarbības. 
@@ -124,16 +124,16 @@ class GossipNode:
             delay = self.rng.expovariate(self.contact_rate)
             yield self.env.timeout(delay)
 
-            if not self.is_online:
-                self.stats.stale_hits += 1
-                continue
+            #if not self.is_online:
+            #    self.stats.stale_hits += 1
+            #    continue
 
             if not self.peers:
                 continue
 
             peer: GossipNode = self.rng.choice(self.peers)
-            if not peer.is_online and not peer.is_dead:
-                continue
+            #if not peer.is_online and not peer.is_dead:
+            #    continue
 
             # salīdzina versijas, lai pārbaudītu saraksta derīgumu un izvairītos no saņemšanas vai izplatīšanas vecāku sarakstu (kas varētu būt ļaunprātīgi vai vienkārši nevēlamas novecojušas informācijas avots).
             self_ver = self.cached_list.version if self.cached_list else -1

@@ -85,15 +85,15 @@ class PushHolderGossipNode:
             delay = self.rng.expovariate(self.contact_rate)
             yield self.env.timeout(delay)
 
-            if not self.is_online:
-                self.stats.stale_hits += 1
-                continue
+            #if not self.is_online:
+            #    self.stats.stale_hits += 1
+            #    continue
             if not self.peers:
                 continue
 
             peer: PushHolderGossipNode = self.rng.choice(self.peers)
-            if not peer.is_online and not peer.is_dead:
-                continue
+            #if not peer.is_online and not peer.is_dead:
+            #    continue
 
             self_ver = self.cached_list.version if self.cached_list else -1
             peer_ver = peer.cached_list.version if peer.cached_list else -1
@@ -246,11 +246,11 @@ class PushHolderNode:
             delay = self.rng.expovariate(1 / self.mean_presentation_interval)
             yield self.env.timeout(delay)
 
-            if not self.is_online or not self.verifiers:
+            if not self.verifiers:
                 continue
             verifier = self.rng.choice(self.verifiers)
-            if not verifier.is_online:
-                continue
+            #if not verifier.is_online:
+            #    continue
 
             self._exchange_list(verifier)
             verifier._do_verify_holder(self)
