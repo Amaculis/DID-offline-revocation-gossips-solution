@@ -1,13 +1,3 @@
-"""VERIFICATION-GOSSIP strategy.
-
-List propagation happens exclusively at the moment of credential verification.
-When a node verifies a credential it first does a bidirectional version swap
-with a randomly chosen peer, then checks the credential against its (now
-possibly updated) local cache.
-
-No background gossip, no refresh, no push from Issuer.
-is_online controls Issuer access only; local peer exchange always works.
-"""
 from __future__ import annotations
 import random
 import simpy
