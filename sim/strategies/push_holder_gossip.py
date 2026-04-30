@@ -195,7 +195,6 @@ class PushHolderGossipNode:
 # ---------------------------------------------------------------------------
 
 class PushHolderNode:
-    """Credential holder — identical to HolderNode; no Issuer access."""
 
     def __init__(
         self,

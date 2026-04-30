@@ -6,17 +6,70 @@ from sim.run_push_holder_gossip import run as run_push_holder_gossip
 from sim.run_verification_gossip import run as run_verification_gossip
 
 PARAMS = dict(
-    network_size=500,
+    network_size=10000,
     offline_ratio=0.2,
-    dead_ratio=0.71, #tie kas jau nekad nebūs online. 
+    dead_ratio=0.01, #tie kas jau nekad nebūs online. 
     ttl=28800,#3600,
-    revocation_rate=0.01,
+    revocation_rate=0.0001,
     sim_duration=86400 * 7,
     seed=42,
     mean_online_duration=3600,   # 1h
     mean_offline_duration=14400, # 4h
 )
 
+PARAMS_for_pull = dict(
+    network_size=500,
+    offline_ratio=0.5,
+    dead_ratio=0.00, #tie kas jau nekad nebūs online. 
+    ttl=3600,#3600,
+    revocation_rate=0.001,
+    sim_duration=86400 * 7,
+    seed=42,
+    mean_online_duration=86400,  
+    mean_offline_duration=300, 
+)
+
+PARAMS_for_push = dict(
+    network_size=500,
+    offline_ratio=0.4,
+    dead_ratio=0.06, #tie kas jau nekad nebūs online. 
+    ttl=86400,#3600,
+    revocation_rate=0.001,
+    sim_duration=86400 * 7,
+    seed=42,
+    mean_online_duration=1800,  
+    mean_offline_duration=21600, 
+)
+
+PARAMS_IoT = dict(
+    network_size=500,
+    offline_ratio=0.5,
+    dead_ratio=0.7,       # liel bez interneta
+    ttl=604800,           # TTL = 1 nedēļa
+    revocation_rate=0.0001,
+    mean_online_duration=600,    # 10 minutes online
+    mean_offline_duration=86400, # 1 dienu offline
+)
+
+PARAMS_unstable_network = dict(
+    network_size=500,
+    offline_ratio=0.3,
+    dead_ratio=0.5,       # puse bez Issuer-dostupa
+    ttl=28800,
+    revocation_rate=0.001,
+    mean_online_duration=3600,
+    mean_offline_duration=14400,
+)
+
+PARAMS_wallets = dict(
+    network_size=500,
+    offline_ratio=0.4,    # daudz offline
+    dead_ratio=0.6,       # lielākā daļa maku bez Issuer
+    ttl=86400,
+    revocation_rate=0.001,
+    mean_online_duration=1800,   # 30 minutes online
+    mean_offline_duration=21600, # 6 hours offline
+)
 
 def main():
     results = []
@@ -70,10 +123,13 @@ def _print_comparison(results: list[dict]):
         print(f"{label:<36}" + "".join(f"{fn(r):>16}" for r in results))
 
     print("=" * len(header))
-    print(f"\nParams: network_size={results[0]['network_size']}, "
-          f"offline_ratio={results[0]['offline_ratio']}, "
-          f"TTL={results[0]['ttl_s']}s, "
-          f"revocation_rate={results[0]['revocation_rate']} ev/s")
+    #print(f"\nParams: network_size={results[0]['network_size']}, "
+    #      f"offline_ratio={results[0]['offline_ratio']}, "
+    #      f"TTL={results[0]['ttl_s']}s, "
+    #      f"revocation_rate={results[0]['revocation_rate']} ev/s")
+    print("\nFull parameters:")
+    for k, v in PARAMS.items():
+        print(f"  {k} = {v}")
 
 
 def _fmt(v):
