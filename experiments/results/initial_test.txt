@@ -1,0 +1,21 @@
+======================================================================================================
+Metric                                          PULL            PUSH   HOLDER-GOSSIPPUSH-HOLDER-GOSSIP
+======================================================================================================
+Propagation delay p95 (s)                    64920.9         46819.2         29806.7          1655.6
+Propagation delay mean (s)                   58378.8         40027.0         16576.2          1473.5
+Holder propagation delay mean (s)                N/A             N/A         35477.2         20962.4
+Revocations @ 95% coverage                 5000/5000       5000/5000       5000/5000       5000/5000
+False acceptance rate                          7.55%           3.40%           4.37%           0.18%
+Total verifications                            83854           83854           83947           83947
+Bandwidth/node mean (KB)                      1174.5         10190.4           827.6         17539.6
+Bandwidth/node p95 (KB)                       2217.8         14384.5          1462.1         28417.3
+Bandwidth total (MB)                           573.5          4975.8           525.3         11133.6
+Storage/node mean (KB)                          19.4            19.6            19.6            19.6
+Storage/node max (KB)                           19.6            19.6            19.6            19.6
+Expired-TTL verifications           39.54% (33156/83854)23.23% (19478/83854)17.82% (14960/83947)13.80% (11583/83947)
+List age at verify mean (s)                  29520.7         19919.2         22941.9         10925.7
+List age at verify min (s)                       4.5             0.0            42.1             0.0
+List age at verify max (s)                  146346.5        145765.5        112092.3        112092.3
+Presentation verifications                         0               0           12776           12776
+Presentation FAR                               0.00%           0.00%           4.32%           0.14%
+======================================================================================================
