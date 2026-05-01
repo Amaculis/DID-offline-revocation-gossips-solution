@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant I as Izdevējs
+    participant V as Verifikators (PushHolderGossipNode)
+    participant H as Turētajs (PushHolderNode)
+    participant Z as Žurnāls
+
+    V->>I: _initial_fetch()
+    I-->>V: StatusList (v1)
+
+    V->>I: notify_online(self)
+    I-->>V: receive_push(v2)
+    V->>V: _absorb(v2)
+
+    loop (~600s) — gossip ar vienaudzi
+        V->>V: _transfer_to(peer)
+    end
+
+    loop (~7200s) — fiziska tikšanās
+        H->>V: _exchange_list(verifier)
+        V-->>H: receive_holder_list(v)
+        V->>V: _absorb()
+        V->>Z: _do_verify_holder() → ieraksts
+    end
+
+    loop (~3600s)
+        V->>Z: _do_verify() → ieraksts
+    end
