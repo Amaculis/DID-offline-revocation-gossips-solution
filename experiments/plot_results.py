@@ -17,10 +17,13 @@ COLORS = {
 STRATEGY_ORDER = ["PULL", "PUSH", "GOSSIP", "MIXED"]
 
 X_LABELS = {
-    "dead_ratio":      "Dead ratio",
-    "offline_ratio":   "Offline ratio",
-    "revocation_rate": "Revocation rate (events/s)",
-    "ttl":             "TTL (s)",
+    "dead_ratio":            "Dead ratio",
+    "offline_ratio":         "Offline ratio",
+    "revocation_rate":       "Revocation rate (events/s)",
+    "ttl":                   "TTL (s)",
+    "network_size":          "Network size (nodes)",
+    "mean_offline_duration": "Mean offline duration (s)",
+    "mean_online_duration":  "Mean online duration (s)",
 }
 
 
@@ -74,7 +77,10 @@ def plot_sweep(sweep_dim: str, df: pd.DataFrame, out_path: str):
 
 
 def main():
-    sweep_dims = ["dead_ratio", "offline_ratio", "revocation_rate", "ttl"]
+    sweep_dims = [
+        "dead_ratio", "offline_ratio", "revocation_rate", "ttl",
+        "network_size", "mean_offline_duration", "mean_online_duration",
+    ]
     for sweep_dim in sweep_dims:
         csv_path = os.path.join(RESULTS_DIR, f"sweep_{sweep_dim}.csv")
         if not os.path.exists(csv_path):
