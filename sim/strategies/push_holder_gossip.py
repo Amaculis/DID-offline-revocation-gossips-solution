@@ -23,6 +23,7 @@ class PushHolderGossipNode:
         mean_offline_duration: float = 14400,
         contact_rate: float = 1 / 600,
         is_dead: bool = False,
+        is_seed: bool = False,
     ):
         self.node_id = node_id
         self.env = env
@@ -33,6 +34,7 @@ class PushHolderGossipNode:
         self.mean_offline = mean_offline_duration
         self.contact_rate = contact_rate
         self.is_dead = is_dead
+        self.is_seed = is_seed
 
         self.is_online = is_online
         self.cached_list: StatusList | None = None
@@ -46,8 +48,8 @@ class PushHolderGossipNode:
         # Šis fetch tiek veikts bez apmaksas, jo tas ir nepieciešams, lai nodrošinātu, ka vismaz viens mezgls sāk ar jaunāko sarakstu, un tāpēc var izplatīt to pārējiem caur gossip.
         self._initial_fetch()
 
-        # Ja sākotnēji ir tiešsaistē, saņem uzreiz push (tikai ja nav dead)
-        if is_online and not is_dead:
+        # Ja sākotnēji ir tiešsaistē un ir seed, saņem uzreiz push
+        if is_online and not is_dead and is_seed:
             issuer.notify_online(self)
 
         env.process(self._connectivity_process())
@@ -55,7 +57,7 @@ class PushHolderGossipNode:
         env.process(self._verify_process())
 
     def _initial_fetch(self):
-        if self.is_dead:
+        if self.is_dead or not self.is_seed:
             return
         fresh = self.issuer.current_list
         self.cached_list = fresh
@@ -76,8 +78,7 @@ class PushHolderGossipNode:
                 duration = self.rng.expovariate(1 / self.mean_offline)
                 yield self.env.timeout(duration)
                 self.is_online = True
-                # Ja sākotnēji ir tiešsaistē, saņem uzreiz push (tikai ja nav dead)
-                if not self.is_dead:
+                if not self.is_dead and self.is_seed:
                     self.issuer.notify_online(self)
 
     def _gossip_process(self):

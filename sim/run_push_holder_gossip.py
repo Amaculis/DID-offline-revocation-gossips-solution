@@ -21,6 +21,7 @@ def run(
     mean_presentation_interval: float = 7200,
     mean_online_duration: float = 3600,
     mean_offline_duration: float = 14400,
+    seed_ratio: float = 0.01,
 ) -> dict:
     rng = random.Random(seed)
     env = simpy.Environment()
@@ -36,6 +37,7 @@ def run(
 
     n_verifiers = network_size
     n_holders = int(network_size * holder_ratio)
+    n_seeds = max(1, int(n_verifiers * seed_ratio))
 
     graph = build_graph(n_verifiers, seed=seed)
     dead = assign_dead_nodes(network_size, dead_ratio, rng)
@@ -59,6 +61,7 @@ def run(
             mean_offline_duration=mean_offline_duration,
             contact_rate=contact_rate,
             is_dead=(vid in dead_verifiers),
+            is_seed=(vid < n_seeds),
         )
         verifiers.append(node)
         issuer.register(node)

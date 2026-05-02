@@ -73,11 +73,19 @@ class PullNode:
 
     def _fetch(self):
         fresh = self.issuer.current_list
+        
+        if fresh.version <= (self.cached_list.version if self.cached_list else -1):
+            return
+        prev_revoked = set(self.cached_list.revoked_ids) if self.cached_list else set()
+    
         self.cached_list = fresh
         bytes_rx = fresh.byte_size()
         self.stats.bytes_transferred += bytes_rx
         self.stats.fetch_count += 1
         self.stats.max_list_bytes = max(self.stats.max_list_bytes, bytes_rx)
+
+        for cid in set(fresh.revoked_ids) - prev_revoked:
+            self.awareness_times.setdefault(cid, self.env.now)
 
     # ------------------------------------------------------------------
     # Peridodiska pārbaude. Reizi noteiktajā laikā pārbauda nejaušu akreditācijas datu statusu un reģistrē rezultātu, salīdzinot ar patiesību
