@@ -1,0 +1,33 @@
+================================================================================================================
+  Averaged over 100 seeds
+================================================================================================================
+Metric                                                PULL              PUSH     HOLDER-GOSSIPPUSH-HOLDER-GOSSIP
+================================================================================================================
+Propagation delay p95 (s)                          64419.3           44276.4           29804.3            1668.8
+Propagation delay mean (s)                         58492.5           39687.1           16420.9            1488.5
+Holder propagation delay mean (s)                      N/A               N/A           35920.5           21202.1
+Revocations @ 95% coverage                       5000/5000         5000/5000         5000/5000         5000/5000
+False acceptance rate                                7.51%             3.25%             4.32%             0.16%
+Total verifications                                  83995             83995             83979             83979
+Bandwidth/node mean (KB)                            1114.5           10112.5             864.1           17480.0
+Bandwidth/node p95 (KB)                             2091.3           14351.6            1487.9           28504.0
+Bandwidth total (MB)                                 544.2            4937.7             548.5           11095.7
+Storage/node mean (KB)                                19.4              19.6              19.6              19.6
+Storage/node max (KB)                                 19.6              19.6              19.6              19.6
+Expired-TTL verifications               38.84% (32627/83995)22.06% (18532/83995)16.88% (14174/83979)12.63% (10609/83979)
+List age at verify mean (s)                        28593.9           18777.1           21961.5            9719.6
+List age at verify min (s)                             9.5               0.0              26.4               0.0
+List age at verify max (s)                        161773.4          145770.4          132888.8          105053.9
+Presentation verifications                               0                 0             12592             12592
+Presentation FAR                                     0.00%             0.00%             4.33%             0.15%
+================================================================================================================
+
+Parameters:
+  network_size = 500
+  offline_ratio = 0.2
+  dead_ratio = 0.01
+  ttl = 28800
+  revocation_rate = 0.01
+  sim_duration = 604800
+  mean_online_duration = 3600
+  mean_offline_duration = 14400
