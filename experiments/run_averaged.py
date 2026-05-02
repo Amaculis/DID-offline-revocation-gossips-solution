@@ -1,12 +1,3 @@
-"""Averaged multi-seed runner.
-
-Runs each strategy N times with different seeds, averages all numeric metrics,
-and prints a comparison table in the same format as main.py.
-
-Usage:
-    python experiments/run_averaged.py
-    python experiments/run_averaged.py --runs 10
-"""
 from __future__ import annotations
 import argparse
 import math
@@ -38,22 +29,21 @@ PARAMS = dict(
     mean_offline_duration=14400,
 )
 
-# Seeds used across runs — deterministic so results are reproducible
 BASE_SEEDS = list(range(1, 101))
 
 
-# ---------------------------------------------------------------------------
+# 
 # Averaging logic
-# ---------------------------------------------------------------------------
+
 
 def _safe_mean(values: list) -> float | None:
-    """Mean of a list, ignoring None and NaN. Returns None if nothing valid."""
+    
     valid = [v for v in values if v is not None and not (isinstance(v, float) and math.isnan(v))]
     return sum(valid) / len(valid) if valid else None
 
 
 def average_results(results: list[dict]) -> dict:
-    """Merge a list of result dicts into a single averaged dict."""
+
     n = len(results)
 
     def mean(key):
@@ -106,9 +96,7 @@ def average_results(results: list[dict]) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # Table printing (mirrors main.py)
-# ---------------------------------------------------------------------------
 
 def _fmt(v) -> str:
     return "N/A" if v is None else f"{v:.1f}"
@@ -172,9 +160,7 @@ def _print_comparison(results: list[dict], n_runs: int):
         print(f"  {k} = {v}")
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser()
