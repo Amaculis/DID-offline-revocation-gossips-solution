@@ -9,13 +9,6 @@ def propagation_delay(
     target_pct: float = 0.95,
     exclude_dead: bool = False,
 ) -> dict[int, float | None]:
-    """
-    Katram revokācijas notikumam atrod laiku, 
-    kad `target_pct` tiešsaistes spējīgo mezglu ir 
-    saņēmuši šo revokāciju savā kešatmiņas sarakstā. 
-    Atgriež vārdnīcu {credential_id: delay_seconds | None}, 
-    kur None nozīmē, ka tas nekad nesasniedza target_pct simulaācijas laikā.
-    """
 
     results = {}
     reachable = sum(1 for n in nodes if not (exclude_dead and getattr(n, "is_dead", False)))
@@ -38,10 +31,6 @@ def propagation_delay(
 
 
 def false_acceptance_rate(all_attempts: list[VerificationAttempt]) -> float:
-    """
-    % no verifikācijām, kurās akreditācija bija revokēta, 
-    bet mezgls NEZINĀJA (novecojusi / trūkstoša saraksta dēļ).
-    """
     revoked_checks = [a for a in all_attempts if a.was_revoked]
     if not revoked_checks:
         return 0.0
@@ -61,7 +50,6 @@ def bandwidth_per_node(stats: list[NodeStats]) -> dict[str, float]:
 
 
 def expired_ttl_verification_rate(all_attempts: list[VerificationAttempt], ttl: float) -> dict[str, float]:
-    """Fraction of verifications performed with a list older than TTL."""
     if not all_attempts:
         return {"rate": 0.0, "count": 0, "total": 0}
     expired = sum(1 for a in all_attempts if a.list_age > ttl)
@@ -73,7 +61,6 @@ def expired_ttl_verification_rate(all_attempts: list[VerificationAttempt], ttl: 
 
 
 def list_age_at_verification(all_attempts: list[VerificationAttempt]) -> dict[str, float]:
-    """Age of the cached list (seconds) at the moment of each verification call."""
     finite = [a.list_age for a in all_attempts if a.list_age != float("inf")]
     if not finite:
         return {"mean": float("inf"), "min": float("inf"), "max": float("inf")}

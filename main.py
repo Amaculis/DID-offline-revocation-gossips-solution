@@ -73,7 +73,7 @@ PARAMS_wallets = dict(
 
 def main():
     results = []
-    for label, runner in [#("PULL", run_pull),
+    for label, runner in [("PULL", run_pull),
                           ("PUSH", run_push),
                           #("GOSSIP", run_gossip),
                           ("HOLDER-GOSSIP", run_holder_gossip),
