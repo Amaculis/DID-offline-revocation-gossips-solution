@@ -99,21 +99,19 @@ def summarize(
     nodes: list,
     stats: list[NodeStats],
     ttl: float = 3600.0,
+    exclude_dead: bool = True,
 ) -> dict:
     all_attempts = [a for node in nodes for a in node.verification_log]
     regular_attempts = [a for a in all_attempts if not a.is_presentation]
     presentation_attempts = [a for a in all_attempts if a.is_presentation]
 
-    # For HOLDER-GOSSIP: propagation delay is measured separately for verifiers
-    # and holders. For all other strategies there are no HolderNodes, so
-    # verifier_nodes == nodes.
     verifier_nodes = [n for n in nodes if not getattr(n, "is_holder", False)]
     holder_nodes   = [n for n in nodes if getattr(n, "is_holder", False)]
 
-    delays = propagation_delay(revocation_log, verifier_nodes)
+    delays = propagation_delay(revocation_log, verifier_nodes, exclude_dead=exclude_dead)
     valid_delays = [d for d in delays.values() if d is not None]
 
-    holder_delays = propagation_delay(revocation_log, holder_nodes) if holder_nodes else {}
+    holder_delays = propagation_delay(revocation_log, holder_nodes, exclude_dead=exclude_dead) if holder_nodes else {}
     holder_valid  = [d for d in holder_delays.values() if d is not None]
 
     return {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-import math
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -26,41 +26,98 @@ X_LABELS = {
     "mean_online_duration":  "Mean online duration (s)",
 }
 
+# (column_base, title, ylabel, y_formatter)
+SUBPLOTS = [
+    ("far",                   "False Acceptance Rate",      "FAR",       mticker.PercentFormatter(xmax=1)),
+    ("delay_mean",            "Propagation Delay Mean (s)", "Delay (s)", None),
+    ("bandwidth_mb",          "Total Bandwidth (MB)",       "MB",        None),
+    ("bandwidth_per_node_kb", "Bandwidth per Node (KB)",    "KB",        None),
+]
+
+
+def _ci95_col(df: pd.DataFrame, mean_col: str) -> np.ndarray:
+    """Return 95% CI half-widths. Uses *_ci95 column if present, else 1.96*std/sqrt(n)."""
+    ci_col = mean_col.replace("_mean", "_ci95")
+    if ci_col in df.columns:
+        return df[ci_col].to_numpy(dtype=float)
+    std_col = mean_col.replace("_mean", "_std")
+    if std_col not in df.columns:
+        return np.full(len(df), np.nan)
+    std = df[std_col].to_numpy(dtype=float)
+    n = df["n_runs"].to_numpy(dtype=float) if "n_runs" in df.columns else np.full(len(df), 1.0)
+    return 1.96 * std / np.sqrt(np.maximum(n, 1))
+
+
+def _add_pull_linear_fit(ax, x: np.ndarray, y: np.ndarray):
+    """Overlay FAR ≈ k·dead_ratio linear fit for PULL and annotate k."""
+    valid = ~np.isnan(y) & ~np.isnan(x) & (x > 0)
+    if valid.sum() < 2:
+        return
+    # Force through origin: k = mean(y/x) over valid points
+    k = np.mean(y[valid] / x[valid])
+    x_line = np.linspace(0, x[valid].max(), 100)
+    ax.plot(x_line, k * x_line, linestyle="--", linewidth=1.2,
+            color=COLORS["PULL"], alpha=0.6, label=f"PULL fit: FAR≈{k:.2f}·dead_ratio")
+    ax.legend(fontsize=8)
+
 
 def plot_sweep(sweep_dim: str, df: pd.DataFrame, out_path: str):
-    fig, axes = plt.subplots(3, 1, figsize=(12, 10))
+    strategies = [s for s in STRATEGY_ORDER if s in df["strategy"].unique()]
+    fig, axes = plt.subplots(len(SUBPLOTS), 1, figsize=(12, 4 * len(SUBPLOTS)))
     fig.suptitle(f"Strategy comparison — sweep: {sweep_dim}", fontsize=14, fontweight="bold")
 
     x_label = X_LABELS.get(sweep_dim, sweep_dim)
 
-    subplots = [
-        ("far",              "False Acceptance Rate",         "FAR",      mticker.PercentFormatter(xmax=1)),
-        ("delay_mean",       "Propagation Delay Mean (s)",    "Delay (s)", None),
-        ("bandwidth_mb",     "Total Bandwidth (MB)",          "MB",        None),
-    ]
+    for ax, (col, title, ylabel, formatter) in zip(axes, SUBPLOTS):
+        mean_col = col + "_mean"
+        any_data = False
 
-    strategies = [s for s in STRATEGY_ORDER if s in df["strategy"].unique()]
-
-    for ax, (col, title, ylabel, formatter) in zip(axes, subplots):
         for strategy in strategies:
             sub = df[df["strategy"] == strategy].sort_values("sweep_value")
-            x = sub["sweep_value"]
-            y = sub[col]
+            x   = sub["sweep_value"].to_numpy()
+            y   = sub[mean_col].to_numpy(dtype=float)
+            ci  = _ci95_col(sub, mean_col)
 
-            # Drop NaN for delay
-            mask = y.notna() & y.apply(lambda v: not (isinstance(v, float) and math.isnan(v)))
-            x_plot = x[mask]
-            y_plot = y[mask]
+            valid = ~np.isnan(y)
 
-            if x_plot.empty:
+            # Annotate NaN points with a vertical marker (strategy did not converge)
+            nan_x = x[~valid]
+            if len(nan_x) > 0:
+                color = COLORS.get(strategy)
+                for nx in nan_x:
+                    ax.axvline(nx, color=color, linewidth=0.5, alpha=0.3, linestyle=":")
+
+            if not valid.any():
                 continue
+            any_data = True
 
-            ax.plot(
-                x_plot, y_plot,
-                marker="o", linewidth=2, markersize=5,
-                color=COLORS.get(strategy, None),
-                label=strategy,
-            )
+            color = COLORS.get(strategy)
+            ax.plot(x[valid], y[valid], marker="o", linewidth=2, markersize=5,
+                    color=color, label=strategy)
+
+            # 95% CI shading
+            lo = y - ci
+            hi = y + ci
+            finite_ci = ~np.isnan(ci)
+            if (valid & finite_ci).any():
+                mask = valid & finite_ci
+                ax.fill_between(x[mask], lo[mask], hi[mask], alpha=0.15, color=color)
+
+        # Linear fit: FAR vs dead_ratio for PULL only
+        if sweep_dim == "dead_ratio" and col == "far" and "PULL" in strategies:
+            pull_sub = df[df["strategy"] == "PULL"].sort_values("sweep_value")
+            _add_pull_linear_fit(ax,
+                                 pull_sub["sweep_value"].to_numpy(),
+                                 pull_sub[mean_col].to_numpy(dtype=float))
+
+        if not any_data:
+            ax.text(0.5, 0.5, "No data", transform=ax.transAxes,
+                    ha="center", va="center", fontsize=12, color="gray")
+        elif col == "bandwidth_mb":
+            # Note about NaN meaning
+            ax.text(0.01, 0.98, "Dotted verticals = strategy did not produce data (NaN)",
+                    transform=ax.transAxes, ha="left", va="top",
+                    fontsize=7, color="gray", style="italic")
 
         ax.set_title(title, fontsize=11)
         ax.set_xlabel(x_label)
@@ -76,11 +133,44 @@ def plot_sweep(sweep_dim: str, df: pd.DataFrame, out_path: str):
     print(f"  Saved: {out_path}")
 
 
+def plot_2d_sweep(csv_path: str, dim_x: str, dim_y: str):
+    df = pd.read_csv(csv_path)
+    strategies = [s for s in STRATEGY_ORDER if s in df["strategy"].unique()]
+
+    for metric, metric_label in [("far_mean", "FAR"), ("delay_mean_mean", "Delay mean (s)")]:
+        fig, axes = plt.subplots(1, len(strategies), figsize=(5 * len(strategies), 5), squeeze=False)
+        fig.suptitle(f"{metric_label} — {dim_x} × {dim_y}", fontsize=13, fontweight="bold")
+
+        values_x = sorted(df[dim_x].unique())
+        values_y = sorted(df[dim_y].unique())
+
+        for ax, strategy in zip(axes[0], strategies):
+            sub = df[df["strategy"] == strategy]
+            grid = np.full((len(values_x), len(values_y)), np.nan)
+            for i, vx in enumerate(values_x):
+                for j, vy in enumerate(values_y):
+                    row = sub[(sub[dim_x] == vx) & (sub[dim_y] == vy)]
+                    if not row.empty and metric in row.columns:
+                        grid[i, j] = row[metric].values[0]
+
+            X, Y = np.meshgrid(values_y, values_x)
+            im = ax.pcolormesh(X, Y, grid, shading="auto", cmap="YlOrRd")
+            fig.colorbar(im, ax=ax, label=metric_label)
+            ax.set_title(strategy, fontsize=11, color=COLORS.get(strategy, "black"))
+            ax.set_xlabel(dim_y)
+            ax.set_ylabel(dim_x)
+            ax.set_yscale("log")
+
+        plt.tight_layout()
+        slug = metric.replace("_mean", "")
+        out_path = os.path.join(RESULTS_DIR, f"sweep2d_{slug}.png")
+        plt.savefig(out_path, dpi=150)
+        plt.close(fig)
+        print(f"  Saved: {out_path}")
+
+
 def main():
-    sweep_dims = [
-        "dead_ratio", "offline_ratio", "revocation_rate", "ttl",
-        "network_size", "mean_offline_duration", "mean_online_duration",
-    ]
+    sweep_dims = list(X_LABELS.keys())
     for sweep_dim in sweep_dims:
         csv_path = os.path.join(RESULTS_DIR, f"sweep_{sweep_dim}.csv")
         if not os.path.exists(csv_path):
@@ -89,6 +179,13 @@ def main():
         df = pd.read_csv(csv_path)
         out_path = os.path.join(RESULTS_DIR, f"sweep_{sweep_dim}.png")
         plot_sweep(sweep_dim, df, out_path)
+
+    csv_2d = os.path.join(RESULTS_DIR, "sweep2d_ttl_x_dead_ratio.csv")
+    if os.path.exists(csv_2d):
+        plot_2d_sweep(csv_2d, "ttl", "dead_ratio")
+    else:
+        print(f"  Skipping 2D heatmap — CSV not found: {csv_2d}")
+        print("  Run: python experiments/run_sweep.py --2d")
 
 
 if __name__ == "__main__":
