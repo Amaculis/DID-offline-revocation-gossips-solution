@@ -65,7 +65,7 @@ class Issuer:
         #print(f"[DEBUG] t={self.env.now:.0f} pushing to {sum(1 for n in self._subscribers if n.is_online)} nodes")
   
         for node in self._subscribers:
-            if node.is_online:
+            if node.is_online and not node.is_dead:
                 node.receive_push(self._current_list)
 
     @property
@@ -75,9 +75,7 @@ class Issuer:
     def is_revoked(self, credential_id: int) -> bool:
         return credential_id in self._revoked
 
-    # ------------------------------------------------------------------
-    # PUSH support
-    # ------------------------------------------------------------------
+    # PUSH support   
     def notify_online(self, node) -> None:
         #Kad parādās online, tas tiek informēts par jaunāko StatusList, lai varētu salīdzināt versijas un izlemt, vai pieņemt jauno sarakstu.
         node.receive_push(self._current_list)

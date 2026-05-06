@@ -8,9 +8,9 @@ from sim.run_verification_gossip import run as run_verification_gossip
 PARAMS = dict(
     network_size=500,
     offline_ratio=0.2,
-    dead_ratio=0.01, #tie kas jau nekad nebūs online. 
+    dead_ratio=0.9, #tie kas jau nekad nebūs online. 
     ttl=28800,#3600,
-    revocation_rate=0.01,
+    revocation_rate=0.1,
     sim_duration=86400 * 7,
     seed=42,
     mean_online_duration=3600,   # 1h

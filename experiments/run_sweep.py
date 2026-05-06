@@ -35,7 +35,7 @@ BASE_SEEDS = list(range(1, 101))
 
 SWEEPS = {
     "dead_ratio":            [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
-    "offline_ratio":         [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
+    "offline_ratio":         [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95],
     "revocation_rate":       [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
     "ttl":                   [60, 120, 360, 720, 1440, 2880, 3600, 4320, 7200, 14400, 28800, 43200, 57600, 86400],
     "network_size":          [50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7000, 10000, 20000, 30000, 40000, 50000],
@@ -164,11 +164,21 @@ def _run_point(strategy: str, params: dict, seeds: list, pool,
 # Sweep runners
 
 
+def _apply_sweep_param(params: dict, sweep_dim: str, value) -> dict:
+    params = {**params, sweep_dim: value}
+    if sweep_dim == "offline_ratio" and value < 1.0:
+        # Adjust mean_offline_duration so steady-state matches the target ratio:
+        # ratio = mean_offline / (mean_online + mean_offline)
+        mean_online = params.get("mean_online_duration", 3600)
+        params["mean_offline_duration"] = mean_online * value / (1.0 - value)
+    return params
+
+
 def run_sweep(sweep_dim: str, sweep_values: list, seeds: list, pool,
               cv_threshold: float, max_seeds: list) -> pd.DataFrame:
     rows = []
     for value in sweep_values:
-        params = {**BASE, sweep_dim: value}
+        params = _apply_sweep_param(BASE.copy(), sweep_dim, value)
         for strategy in RUNNERS:
             print(f"  {strategy:<8} | {sweep_dim}={value}  ({len(seeds)} seeds)", flush=True)
             agg = _run_point(strategy, params, seeds, pool, cv_threshold, max_seeds)
@@ -181,7 +191,8 @@ def run_2d_sweep(dim_x: str, dim_y: str, values_x: list, values_y: list,
     rows = []
     for vx in values_x:
         for vy in values_y:
-            params = {**BASE, dim_x: vx, dim_y: vy}
+            params = _apply_sweep_param(BASE.copy(), dim_x, vx)
+            params = _apply_sweep_param(params, dim_y, vy)
             for strategy in RUNNERS:
                 print(f"  {strategy:<8} | {dim_x}={vx}, {dim_y}={vy}  ({len(seeds)} seeds)", flush=True)
                 agg = _run_point(strategy, params, seeds, pool, cv_threshold, max_seeds)
@@ -203,14 +214,17 @@ def main():
                         help="Which sweep dims to run (default: all)")
     parser.add_argument("--2d", dest="run_2d", action="store_true",
                         help="Also run 2D sweeps")
+    parser.add_argument("--no-adaptive", dest="no_adaptive", action="store_true",
+                        help="Disable adaptive extra seeds for high-CV points (uniform n_runs)")
     args = parser.parse_args()
 
     seeds     = BASE_SEEDS[:args.runs]
-    max_seeds = BASE_SEEDS[args.runs:args.max_runs]
+    max_seeds = [] if args.no_adaptive else BASE_SEEDS[args.runs:args.max_runs]
     workers   = args.workers or cpu_count()
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
-    print(f"Workers: {workers}  |  Base seeds: {len(seeds)}  |  Max seeds (high-CV): {args.max_runs}  |  CV threshold: {args.cv_threshold}")
+    mode = "uniform" if args.no_adaptive else f"adaptive (CV>{args.cv_threshold} → up to {args.max_runs} seeds)"
+    print(f"Workers: {workers}  |  Seeds per point: {len(seeds)}  |  Mode: {mode}")
 
     with Pool(processes=workers) as pool:
         dims = args.dims if args.dims else list(SWEEPS.keys())
