@@ -163,7 +163,7 @@ def plot_2d_sweep(csv_path: str, dim_x: str, dim_y: str):
 
         plt.tight_layout()
         slug = metric.replace("_mean", "")
-        out_path = os.path.join(RESULTS_DIR, f"sweep2d_{slug}.png")
+        out_path = os.path.join(RESULTS_DIR, f"sweep2d_{dim_x}_x_{dim_y}_{slug}.png")
         plt.savefig(out_path, dpi=150)
         plt.close(fig)
         print(f"  Saved: {out_path}")
@@ -180,12 +180,17 @@ def main():
         out_path = os.path.join(RESULTS_DIR, f"sweep_{sweep_dim}.png")
         plot_sweep(sweep_dim, df, out_path)
 
-    csv_2d = os.path.join(RESULTS_DIR, "sweep2d_ttl_x_dead_ratio.csv")
-    if os.path.exists(csv_2d):
-        plot_2d_sweep(csv_2d, "ttl", "dead_ratio")
-    else:
-        print(f"  Skipping 2D heatmap — CSV not found: {csv_2d}")
-        print("  Run: python experiments/run_sweep.py --2d")
+    sweeps_2d = [
+        ("ttl", "dead_ratio"),
+        ("mean_online_duration", "mean_offline_duration"),
+    ]
+    for dim_x, dim_y in sweeps_2d:
+        csv_2d = os.path.join(RESULTS_DIR, f"sweep2d_{dim_x}_x_{dim_y}.csv")
+        if os.path.exists(csv_2d):
+            plot_2d_sweep(csv_2d, dim_x, dim_y)
+        else:
+            print(f"  Skipping 2D heatmap ({dim_x} × {dim_y}) — CSV not found")
+            print("  Run: python experiments/run_sweep.py --2d")
 
 
 if __name__ == "__main__":

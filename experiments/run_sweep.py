@@ -32,6 +32,8 @@ BASE = dict(
 )
 
 BASE_SEEDS = list(range(1, 101))
+BASE_CONTACT_RATE = 1 / 600       # default contact_rate per node
+BASE_NETWORK_SIZE = BASE["network_size"]  # 500
 
 SWEEPS = {
     "dead_ratio":            [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
@@ -40,13 +42,17 @@ SWEEPS = {
     "ttl":                   [60, 120, 360, 720, 1440, 2880, 3600, 4320, 7200, 14400, 28800, 43200, 57600, 86400],
     "network_size":          [50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7000, 10000, 20000, 30000, 40000, 50000],
     "mean_offline_duration": [600, 1800, 3600, 7200, 14400, 28800, 43200, 86400],
-            "mean_online_duration":  [300, 600, 1200, 1800, 3600, 7200, 14400, 28800],
+    "mean_online_duration":  [300, 600, 1200, 1800, 3600, 7200, 14400, 28800],
         }
 
 SWEEPS_2D = {
     ("ttl", "dead_ratio"): (
         [3600, 14400, 28800, 86400],
         [0.0, 0.1, 0.2, 0.3, 0.5, 0.7],
+    ),
+    ("mean_online_duration", "mean_offline_duration"): (
+        [300, 1200, 3600, 7200, 14400],
+        [600, 3600, 14400, 28800, 86400],
     ),
 }
 
@@ -86,11 +92,15 @@ RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 # Worker — must be a top-level function so multiprocessing can pickle it
 
 
+_NO_CONTACT_RATE = {"PULL", "PUSH"}
+
 def _worker(task: tuple) -> dict | None:
     strategy_name, params, seed = task
     runner = RUNNERS[strategy_name]
+    run_params = {k: v for k, v in params.items()
+                  if not (k == "contact_rate" and strategy_name in _NO_CONTACT_RATE)}
     try:
-        return runner(**{**params, "seed": seed})
+        return runner(**{**run_params, "seed": seed})
     except Exception as exc:
         print(f"    ERROR {strategy_name} seed={seed}: {exc}")
         return None
@@ -166,11 +176,19 @@ def _run_point(strategy: str, params: dict, seeds: list, pool,
 
 def _apply_sweep_param(params: dict, sweep_dim: str, value) -> dict:
     params = {**params, sweep_dim: value}
-    if sweep_dim == "offline_ratio" and value < 1.0:
+    if sweep_dim == "offline_ratio" and 0.0 < value < 1.0:
         # Adjust mean_offline_duration so steady-state matches the target ratio:
         # ratio = mean_offline / (mean_online + mean_offline)
         mean_online = params.get("mean_online_duration", 3600)
         params["mean_offline_duration"] = mean_online * value / (1.0 - value)
+    elif sweep_dim == "offline_ratio" and value == 0.0:
+        # All nodes always online — set a very short offline duration (practically never offline)
+        params["mean_offline_duration"] = 1.0
+    if sweep_dim == "network_size":
+        # Normalize contact_rate so total gossip bandwidth stays constant:
+        # base_total_rate = BASE["network_size"] * BASE_CONTACT_RATE
+        # contact_rate = base_total_rate / value
+        params["contact_rate"] = BASE_NETWORK_SIZE * BASE_CONTACT_RATE / value
     return params
 
 
