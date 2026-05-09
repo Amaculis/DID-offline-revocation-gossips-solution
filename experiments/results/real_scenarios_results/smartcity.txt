@@ -1,0 +1,30 @@
+======================================================================================================
+Metric                                          PULL            PUSH   HOLDER-GOSSIPPUSH-HOLDER-GOSSIP
+======================================================================================================
+Propagation delay p95 (s)                     8008.4          5834.7          6201.1           374.3
+Propagation delay mean (s)                    7020.9          4914.8          4551.0           314.4
+Holder propagation delay mean (s)                N/A             N/A         25445.6         21834.5
+Revocations @ 95% coverage                 6004/6074       6031/6074       6031/6074       6073/6074
+False acceptance rate                          5.79%           5.24%           1.48%           0.02%
+Total verifications                           167331          167331          167234          167234
+Bandwidth/node mean (KB)                      1657.0         55469.3          5082.7         48841.0
+Bandwidth/node p95 (KB)                       1857.2         63158.5          9298.8         70205.2
+Bandwidth total (MB)                          1618.1         54169.3          6452.6         62005.2
+Storage/node mean (KB)                          22.5            22.6            23.5            23.7
+Storage/node max (KB)                           23.8            23.8            23.8            23.8
+Expired-TTL verifications           19.51% (32641/167331)12.25% (20506/167331)50.83% (85007/167234)0.07% (114/167234)
+List age at verify mean (s)                   2597.9           816.1          4367.4           185.3
+List age at verify min (s)                       3.7             0.0            12.9             0.0
+List age at verify max (s)                   36710.2         35911.9        575858.6         32943.6
+Presentation verifications                         0               0           24920           24920
+Presentation FAR                               0.00%           0.00%           1.44%           0.00%
+======================================================================================================
+
+Full parameters:
+  network_size = 1000
+  offline_ratio = 0.1
+  dead_ratio = 0.05
+  ttl = 3600
+  revocation_rate = 0.01
+  mean_online_duration = 14400
+  mean_offline_duration = 3600

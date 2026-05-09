@@ -71,6 +71,89 @@ PARAMS_wallets = dict(
     mean_offline_duration=21600, # 6 hours offline
 )
 
+#--------------Darba testi----------------
+PARAMS_Smartcity = dict(
+    network_size=1000,
+    offline_ratio=0.1,    # daudz offline
+    dead_ratio=0.05,       # lielākā daļa maku bez Issuer
+    ttl=3600,
+    revocation_rate=0.01,
+    mean_online_duration=14400,   # 4 hours online
+    mean_offline_duration=3600, # 1 hour offline
+)
+
+PARAMS_countyside = dict(
+    network_size=200,
+    offline_ratio=0.6,    
+    dead_ratio=0.2,       
+    ttl=86400,
+    revocation_rate=0.001,
+    mean_online_duration=3600,   # 1 hour online
+    mean_offline_duration=1800, # 1 hour offline
+)
+
+PARAMS_critical = dict(
+    network_size=500,
+    offline_ratio=0.05,    
+    dead_ratio=0.01,      
+    ttl=300,
+    revocation_rate=0.1,
+    mean_online_duration=3600,   # 1 hour online
+    mean_offline_duration=1800, # 0.5 hour offline
+)
+
+PARAMS_mobile = dict(
+    network_size=500,
+    offline_ratio=0.03,    
+    dead_ratio=0.05,      
+    ttl=7200,
+    revocation_rate=0.01,
+    mean_online_duration=1800,   # 0.5 hour online
+    mean_offline_duration=600, # 10 min offline
+)
+
+PARAMS_factory = dict(
+    network_size=300,
+    offline_ratio=0.4,    
+    dead_ratio=0.1,      
+    ttl=14400,
+    revocation_rate=0.005,
+    mean_online_duration=28800,   # 8 hours online
+    mean_offline_duration=57600, # 16 hours offline
+)
+
+PARAMS_apocalipse = dict(
+    network_size=300,
+    offline_ratio=0.8,    
+    dead_ratio=0.7,      
+    ttl=86400,
+    revocation_rate=0.05,
+    mean_online_duration=600,   # 10 minutes online
+    mean_offline_duration=172800, # 2 days offline
+)
+
+PARAMS_expedition = dict(
+    network_size=50,
+    offline_ratio=0.7,    
+    dead_ratio=0.3,      
+    ttl=604800,
+    revocation_rate=0.001,
+    mean_online_duration=1800,   # 30 minutes online
+    mean_offline_duration=259200, # 3 days offline
+)
+
+PARAMS_test = dict(
+    network_size=2000,
+    offline_ratio=0.6,    
+    dead_ratio=0.2,       
+    ttl=86400,
+    revocation_rate=0.001,
+    mean_online_duration=3600,   # 1 hour online
+    mean_offline_duration=1800, # 1 hour offline
+)
+
+PARAMS = PARAMS_test 
+
 def main():
     results = []
     for label, runner in [("PULL", run_pull),
