@@ -26,7 +26,7 @@ BASE = dict(
     dead_ratio=0.1,
     ttl=28800,
     revocation_rate=0.001,
-    sim_duration=86400,          # 1 day (instead of 7)
+    sim_duration=21600,          # 6 hours (instead of 7 days)
     mean_online_duration=3600,
     mean_offline_duration=14400,
 )
@@ -37,7 +37,7 @@ BASE_SEEDS = list(range(1, 101))
 
 NETWORK_SIZES = [
     100, 300, 500, 1_000, 2_000, 5_000,
-    10_000, 30_000, 100_000, 300_000, 1_000_000,
+    10_000, 30_000, 100_000, 200_000, 400_000, 600_000, 800_000, 1_000_000,
 ]
 
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
