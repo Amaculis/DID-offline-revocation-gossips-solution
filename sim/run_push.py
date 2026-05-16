@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 import simpy
 from .common.issuer import Issuer
-from .common.network import build_graph, assign_initial_states, assign_dead_nodes
+from .common.network import assign_initial_states, assign_dead_nodes
 from .strategies.push import PushNode
 from .common.metrics import summarize
 
