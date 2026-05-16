@@ -103,7 +103,7 @@ def summarize(
 
     return {
         "propagation_delay_p95_s": (
-            sorted(valid_delays)[int(len(valid_delays) * 0.95)] if valid_delays else None
+            sorted(valid_delays)[min(int(len(valid_delays) * 0.95), len(valid_delays) - 1)] if valid_delays else None
         ),
         "propagation_delay_mean_s": (
             sum(valid_delays) / len(valid_delays) if valid_delays else None

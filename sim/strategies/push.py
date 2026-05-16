@@ -4,7 +4,6 @@ import simpy
 from ..common.models import StatusList, VerificationAttempt, NodeStats
 from ..common.issuer import Issuer
 
-
 class PushNode:
     def __init__(
         self,
@@ -38,9 +37,8 @@ class PushNode:
         if is_online and not is_dead:
             issuer.notify_online(self)
 
-    # ------------------------------------------------------------------
     # Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem. Kad parādās online, tas tiek informēts par jaunāko StatusList, lai varētu salīdzināt versijas un izlemt, vai pieņemt jauno sarakstu.
-    # ------------------------------------------------------------------
+    
     def _connectivity_process(self):
         while True:
             if self.is_online:
@@ -56,11 +54,10 @@ class PushNode:
                 if not self.is_dead:
                     self.issuer.notify_online(self)
 
-    # ------------------------------------------------------------------
     # Saņem push no izdevēja
-    # ------------------------------------------------------------------
+    
     def receive_push(self, status_list: StatusList) -> None:
-        """Accept the pushed list only if it carries a strictly newer version."""
+        
         current_version = self.cached_list.version if self.cached_list is not None else -1
         if status_list.version <= current_version:
             return  # ja mazāks vai vienāds, tad nevajag atjaunināt
@@ -81,9 +78,7 @@ class PushNode:
             if cid not in self.awareness_times:
                 self.awareness_times[cid] = self.env.now
 
-    # ------------------------------------------------------------------
     # Periodiski pārbauda akreditācijas statusu, lai izmērītu false acceptance rate. Šī daļa ir identiska PullNode, jo mēs vēlamies salīdzināt tikai izplatīšanās mehānismu, nevis verifikācijas loģiku.
-    # ------------------------------------------------------------------
     def _verify_process(self):
         mean_verify_interval = 3600
         while True:

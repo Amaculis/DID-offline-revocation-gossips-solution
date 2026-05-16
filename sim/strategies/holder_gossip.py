@@ -1,26 +1,9 @@
-"""HOLDER-GOSSIP strategy.
-
-Two node types:
-  HolderGossipNode — verifier; gossips with peers AND receives list updates
-                     from holders during credential presentations.
-  HolderNode       — credential holder; cannot reach the Issuer directly;
-                     only receives a StatusList through presentation exchanges
-                     with verifiers, then carries it to the next verifier.
-"""
 from __future__ import annotations
 import random
 import simpy
 from ..common.models import StatusList, VerificationAttempt, NodeStats
 from ..common.issuer import Issuer
-
-
-# ---------------------------------------------------------------------------
-# HolderGossipNode (verifier)
-# ---------------------------------------------------------------------------
-
 class HolderGossipNode:
-    """Verifier node — identical to GossipNode with holder-list reception added."""
-
     _REFRESH_CHECK = 300  # seconds between TTL-expiry checks
 
     def __init__(
@@ -35,7 +18,7 @@ class HolderGossipNode:
         mean_offline_duration: float = 14400,  # 4h
         contact_rate: float = 1 / 600,
         is_dead: bool = False,
-        is_seed: bool = False,  # seed nodes have direct Issuer access; others rely solely on gossip/holder exchange
+        is_seed: bool = False,  # Sēklas mezgliem ir tieša emitenta piekļuve; citi paļaujas tikai uz tenkām/turētāju apmaiņu
     ):
         self.node_id = node_id
         self.env = env
@@ -125,7 +108,6 @@ class HolderGossipNode:
             if peer.is_dead:
                 continue
 
-
             self_ver = self.cached_list.version if self.cached_list else -1
             peer_ver = peer.cached_list.version if peer.cached_list else -1
 
@@ -136,7 +118,6 @@ class HolderGossipNode:
 
     def _transfer_to(self, peer: HolderGossipNode):
         peer.receive_gossip(self.cached_list)
-        self.stats.bytes_transferred += self.cached_list.byte_size()  # sender upload
 
     def receive_gossip(self, new_list: StatusList) -> None:
         self._absorb(new_list)
@@ -153,7 +134,7 @@ class HolderGossipNode:
         prev_revoked = set(self.cached_list.revoked_ids) if self.cached_list else set()
         self.cached_list = new_list
         size = new_list.byte_size()
-        self.stats.bytes_transferred += size   # receiver download
+        self.stats.bytes_transferred += size   
         self.stats.fetch_count += 1
         self.stats.max_list_bytes = max(self.stats.max_list_bytes, size)
         for cid in set(new_list.revoked_ids) - prev_revoked:
@@ -217,11 +198,6 @@ class HolderGossipNode:
             )
         )
 
-
-# ---------------------------------------------------------------------------
-# HolderNode (credential holder)
-# ---------------------------------------------------------------------------
-
 class HolderNode:
 
     def __init__(
@@ -233,7 +209,7 @@ class HolderNode:
         rng: random.Random,
         mean_online_duration: float = 3600,   # 1h
         mean_offline_duration: float = 14400,  # 4h
-        mean_presentation_interval: float = 7200,  # present credential every ~2h
+        mean_presentation_interval: float = 7200,  # prezentēt akreditāciju ik pēc ~2h
         is_dead: bool = False,
     ):
         self.node_id = node_id
@@ -246,13 +222,13 @@ class HolderNode:
         self.is_dead = is_dead
 
         self.is_online = is_online
-        self.cached_list: StatusList | None = None   # starts empty — no issuer access
+        self.cached_list: StatusList | None = None   # sāk ar tukšu sarakstu
         self.stats = NodeStats(node_id=node_id)
-        self.verification_log: list[VerificationAttempt] = []  # always empty
+        self.verification_log: list[VerificationAttempt] = []  
         self.awareness_times: dict[int, float] = {}
 
-        self.verifiers: list[HolderGossipNode] = []  # set by runner
-        self.is_holder = True  # marker for metrics — avoids circular import
+        self.verifiers: list[HolderGossipNode] = []  
+        self.is_holder = True  
 
         env.process(self._connectivity_process())
         env.process(self._presentation_process())

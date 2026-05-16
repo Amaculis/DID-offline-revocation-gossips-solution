@@ -1,4 +1,4 @@
-"""Run the VERIFICATION-GOSSIP strategy simulation and return a summary dict."""
+
 from __future__ import annotations
 import random
 import simpy
@@ -6,7 +6,6 @@ from .common.issuer import Issuer
 from .common.network import build_graph, assign_initial_states, assign_dead_nodes
 from .strategies.verification_gossip import VerificationGossipNode
 from .common.metrics import summarize
-
 
 def run(
     network_size: int = 500,

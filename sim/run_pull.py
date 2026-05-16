@@ -66,12 +66,6 @@ def run(
 
 def _patch_awareness_tracking(nodes: list[PullNode], issuer: Issuer):
 
-    """
-    Monkey-patch katra mezgla _fetch(), lai ierakstītu, kad tas pirmo reizi uzzina par katru revokāciju. awareness_times[cred_id] = sim_time.
-     Tas ļauj aprēķināt izplatīšanās aizkavi katrai revokācijai un katram mezglam, un pēc tam apkopot šos datus, lai iegūtu izplatīšanās aizkavi p95 un vidējo vērtību. 
-    """
-
-
     for node in nodes:
         node.awareness_times: dict[int, float] = {}
         original_fetch = node._fetch.__func__  # unbound

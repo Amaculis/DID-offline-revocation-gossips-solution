@@ -1,4 +1,3 @@
-"""Run the HOLDER-GOSSIP strategy simulation and return a summary dict."""
 from __future__ import annotations
 import random
 import simpy

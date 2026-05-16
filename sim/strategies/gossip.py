@@ -1,11 +1,8 @@
-"""GOSSIP strategy: nodes exchange StatusLists when they randomly meet."""
 from __future__ import annotations
 import random
 import simpy
 from ..common.models import StatusList, VerificationAttempt, NodeStats
 from ..common.issuer import Issuer
-
-
 class GossipNode:
     def __init__(
         self,
@@ -19,8 +16,8 @@ class GossipNode:
         mean_offline_duration: float = 14400,  # 4h
         contact_rate: float = 1 / 600,        # vidējais laiks starp kontaktiem ar citiem mezgliem (sekundēs simulaācijas laikā)
         is_dead: bool = False,
-        is_seed: bool = False,  # seed nodes have direct Issuer access; others rely solely on gossip
-    ):
+            is_seed: bool = False,  # Sēklas mezgliem ir tieša emitenta piekļuve; citi paļaujas tikai uz tenkām/turētāju apmaiņu
+        ):
         self.node_id = node_id
         self.env = env
         self.issuer = issuer
@@ -50,9 +47,8 @@ class GossipNode:
         env.process(self._gossip_process())
         env.process(self._verify_process())
 
-    # ------------------------------------------------------------------
     # Paņem sākotnējo sarakstu no izdevēja, lai versiju salīdzināšana darbotos. Šis fetch tiek veikts bez apmaksas, jo tas ir nepieciešams, lai nodrošinātu, ka vismaz viens mezgls sāk ar jaunāko sarakstu, un tāpēc var izplatīt to pārējiem caur gossip.
-    # ------------------------------------------------------------------
+    
     def _initial_fetch(self):
         if self.is_dead or not self.is_seed:
             return  # only seed nodes fetch from issuer
@@ -65,9 +61,9 @@ class GossipNode:
         for cid in fresh.revoked_ids:
             self.awareness_times.setdefault(cid, self.env.now)
 
-    # ------------------------------------------------------------------
+   
     # Savienojamība vienāda ar Pull 
-    # ------------------------------------------------------------------
+
     def _connectivity_process(self):
         while True:
             if self.is_online:
@@ -112,8 +108,7 @@ class GossipNode:
             self.awareness_times.setdefault(cid, self.env.now)
 
     # ------------------------------------------------------------------
-    # Nejauši satiekoties,
-    # salīdzina sarakstu versijas un pārsūta jaunāko uz otru pusi. 
+    # Nejauši satiekoties, salīdzina sarakstu versijas un pārsūta jaunāko uz otru pusi. 
     # Ja viens no mezgliem ir offline, 
     # tad nav nekādas mijiedarbības. 
     # Ja mezgls ir online, bet tam nav neviena peer, 
@@ -146,10 +141,7 @@ class GossipNode:
             # Ja versijas ir vienādas, tad nav ko darīt, jo tas nozīmē, ka abi mezgli jau zina par visām revokācijām, kas ir iekļautas šajā versijā. Nav nepieciešams izplatīt sarakstu, jo tas nesatur nekādu jaunu informāciju nevienam no mezgliem.
 
     def _transfer_to(self, peer: GossipNode):
-        
         peer.receive_gossip(self.cached_list)
-        size = self.cached_list.byte_size()
-        self.stats.bytes_transferred += size  # sūtītājs maksā par upload, saņēmējs maksā par download, kopējais ir 2*size, bet mēs uzskaitām atsevišķi, lai varētu analizēt upload vs download
 
 
     def receive_gossip(self, new_list: StatusList) -> None:
@@ -172,9 +164,8 @@ class GossipNode:
             if cid not in self.awareness_times:
                 self.awareness_times[cid] = self.env.now
 
-    # ------------------------------------------------------------------
     # Verifikācijas identiska ar Pull
-    # ------------------------------------------------------------------
+    
     def _verify_process(self):
         mean_verify_interval = 3600
         while True:

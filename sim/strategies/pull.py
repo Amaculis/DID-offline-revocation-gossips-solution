@@ -1,14 +1,11 @@
-"""PULL strategy: nodes fetch the status list when online and their cache is expired."""
 from __future__ import annotations
 import random
 import simpy
 from ..common.models import StatusList, VerificationAttempt, NodeStats
 from ..common.issuer import Issuer
 
-
 # Cik bieži mezgls pārbauda, vai ir jāatjauno saraksts (sekundēs simulaācijas laikā)
 CHECK_INTERVAL = 300  # Katras 5 min 
-
 
 class PullNode:
     def __init__(
@@ -42,9 +39,8 @@ class PullNode:
         env.process(self._pull_process())
         env.process(self._verify_process())
 
-    # ------------------------------------------------------------------
-    # Connectivity: Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem
-    # ------------------------------------------------------------------
+    # Savienojamība: Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem
+    
     def _connectivity_process(self):
         while True:
             if self.is_online:
@@ -55,10 +51,8 @@ class PullNode:
                 duration = self.rng.expovariate(1 / self.mean_offline)
                 yield self.env.timeout(duration)
                 self.is_online = True
-
-    # ------------------------------------------------------------------
+    
     # PULL loģika: Ik pēc noteikta laika pārbauda vai ir iespējams atjaunot sarakstu
-    # ------------------------------------------------------------------
     def _pull_process(self):
         while True:
             yield self.env.timeout(CHECK_INTERVAL)
@@ -87,12 +81,12 @@ class PullNode:
         for cid in set(fresh.revoked_ids) - prev_revoked:
             self.awareness_times.setdefault(cid, self.env.now)
 
-    # ------------------------------------------------------------------
+    
     # Peridodiska pārbaude. Reizi noteiktajā laikā pārbauda nejaušu akreditācijas datu statusu un reģistrē rezultātu, salīdzinot ar patiesību
-    # ------------------------------------------------------------------
+
     def _verify_process(self):
-        # Nodes verify roughly once per hour on average
-        mean_verify_interval = 3600
+        
+        mean_verify_interval = 3600 # vidēji reiz stundā verificē
         while True:
             delay = self.rng.expovariate(1 / mean_verify_interval)
             yield self.env.timeout(delay)

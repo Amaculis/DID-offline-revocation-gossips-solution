@@ -4,10 +4,7 @@ import simpy
 from ..common.models import StatusList, VerificationAttempt, NodeStats
 from ..common.issuer import Issuer
 
-
-# ---------------------------------------------------------------------------
 # PushHolderGossipNode (verifier)
-# ---------------------------------------------------------------------------
 
 class PushHolderGossipNode:
 
@@ -167,7 +164,6 @@ class PushHolderGossipNode:
         )
 
     def _do_verify_holder(self, holder: PushHolderNode):
-        """Log a verification triggered by a holder presentation."""
         if not self.issuer.credentials:
             return
         cred_id = self.rng.choice(self.issuer.credentials)
@@ -191,9 +187,8 @@ class PushHolderGossipNode:
         )
 
 
-# ---------------------------------------------------------------------------
 # PushHolderNode (credential holder)
-# ---------------------------------------------------------------------------
+
 
 class PushHolderNode:
 
