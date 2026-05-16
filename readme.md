@@ -9,6 +9,7 @@ python main.py
 ```
 
 Jālabo `PARAMS` iekš [main.py](main.py) lai mainītu tīkla lielumu, TTL, dead_ratio utt.
+!!! NAV IETEICAMS laist ļoti lielus tīkla izmērus, ja ir velme iepazīties ar sistēmas darbību. 500 mezgli izgriežas par aptuveni 30 sekundēm katrais stratēģijai, bet, piemēram, 5000, mezgli būs jāgaida jau 20 min katrai. To var samazinot ar daudzpavedienu izpildi, bet par to tālāk. 
 
 ---
 
