@@ -103,7 +103,6 @@ class PushHolderGossipNode:
 
     def _transfer_to(self, peer: PushHolderGossipNode):
         peer.receive_gossip(self.cached_list)
-        self.stats.bytes_transferred += self.cached_list.byte_size()
 
     def receive_push(self, new_list: StatusList) -> None:
         #Pieņem push no izdevēja
