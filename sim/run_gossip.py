@@ -45,7 +45,6 @@ def run(
             issuer=issuer,
             is_online=online_states[node_id],
             rng=random.Random(rng.randint(0, 2**31)),
-            offline_ratio=offline_ratio,
             mean_online_duration=mean_online_duration,
             mean_offline_duration=mean_offline_duration,
             contact_rate=contact_rate,

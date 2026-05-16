@@ -15,8 +15,8 @@ class PullNode:
         issuer: Issuer,
         is_online: bool,
         rng: random.Random,
-        offline_ratio: float,
         # vidējais laiks online / offline, kas tiek zīmēts no eksponenciālām sadalījumiem
+        
         mean_online_duration: float = 3600,   # 1h
         mean_offline_duration: float = 14400,  # 4h
         is_dead: bool = False,
@@ -25,7 +25,6 @@ class PullNode:
         self.env = env
         self.issuer = issuer
         self.rng = rng
-        self.offline_ratio = offline_ratio
         self.mean_online = mean_online_duration
         self.mean_offline = mean_offline_duration
         self.is_dead = is_dead

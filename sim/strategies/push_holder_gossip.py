@@ -15,7 +15,6 @@ class PushHolderGossipNode:
         issuer: Issuer,
         is_online: bool,
         rng: random.Random,
-        offline_ratio: float,
         mean_online_duration: float = 3600,
         mean_offline_duration: float = 14400,
         contact_rate: float = 1 / 600,
@@ -26,7 +25,6 @@ class PushHolderGossipNode:
         self.env = env
         self.issuer = issuer
         self.rng = rng
-        self.offline_ratio = offline_ratio
         self.mean_online = mean_online_duration
         self.mean_offline = mean_offline_duration
         self.contact_rate = contact_rate

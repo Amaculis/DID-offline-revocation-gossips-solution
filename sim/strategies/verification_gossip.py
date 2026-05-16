@@ -14,7 +14,6 @@ class VerificationGossipNode:
         issuer: Issuer,
         is_online: bool,
         rng: random.Random,
-        offline_ratio: float,
         mean_online_duration: float = 3600,
         mean_offline_duration: float = 14400,
         is_dead: bool = False,
@@ -23,7 +22,6 @@ class VerificationGossipNode:
         self.env = env
         self.issuer = issuer
         self.rng = rng
-        self.offline_ratio = offline_ratio
         self.mean_online = mean_online_duration
         self.mean_offline = mean_offline_duration
         self.is_dead = is_dead
