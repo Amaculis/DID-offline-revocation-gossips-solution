@@ -32,7 +32,6 @@ def run(
         rng=random.Random(rng.randint(0, 2**31)),
     )
 
-    build_graph(network_size, seed=seed)
     dead = assign_dead_nodes(network_size, dead_ratio, rng)
     online_states = assign_initial_states(network_size, offline_ratio, rng, dead_nodes=dead)
 
