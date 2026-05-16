@@ -175,6 +175,8 @@ def _apply_sweep_param(params: dict, sweep_dim: str, value) -> dict:
         params["mean_offline_duration"] = mean_online * value / (1.0 - value)
     elif sweep_dim == "offline_ratio" and value == 0.0:
          params["mean_offline_duration"] = 1.0
+    elif sweep_dim == "offline_ratio" and value == 1.0:
+        params["mean_online_duration"] = 1.0
     if sweep_dim == "network_size":
         params["contact_rate"] = BASE_NETWORK_SIZE * BASE_CONTACT_RATE / value
     return params
