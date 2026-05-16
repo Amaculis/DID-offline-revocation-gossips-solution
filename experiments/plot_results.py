@@ -26,7 +26,6 @@ X_LABELS = {
     "mean_online_duration":  "Mean online duration (s)",
 }
 
-# (column_base, title, ylabel, y_formatter)
 SUBPLOTS = [
     ("far",                   "False Acceptance Rate",      "FAR",       mticker.PercentFormatter(xmax=1)),
     ("delay_mean",            "Propagation Delay Mean (s)", "Delay (s)", None),
@@ -36,7 +35,6 @@ SUBPLOTS = [
 
 
 def _ci95_col(df: pd.DataFrame, mean_col: str) -> np.ndarray:
-    """Return 95% CI half-widths. Uses *_ci95 column if present, else 1.96*std/sqrt(n)."""
     ci_col = mean_col.replace("_mean", "_ci95")
     if ci_col in df.columns:
         return df[ci_col].to_numpy(dtype=float)
@@ -49,11 +47,10 @@ def _ci95_col(df: pd.DataFrame, mean_col: str) -> np.ndarray:
 
 
 def _add_pull_linear_fit(ax, x: np.ndarray, y: np.ndarray):
-    """Overlay FAR ≈ k·dead_ratio linear fit for PULL and annotate k."""
+   
     valid = ~np.isnan(y) & ~np.isnan(x) & (x > 0)
     if valid.sum() < 2:
         return
-    # Force through origin: k = mean(y/x) over valid points
     k = np.mean(y[valid] / x[valid])
     x_line = np.linspace(0, x[valid].max(), 100)
     ax.plot(x_line, k * x_line, linestyle="--", linewidth=1.2,
@@ -80,7 +77,6 @@ def plot_sweep(sweep_dim: str, df: pd.DataFrame, out_path: str):
 
             valid = ~np.isnan(y)
 
-            # Annotate NaN points with a vertical marker (strategy did not converge)
             nan_x = x[~valid]
             if len(nan_x) > 0:
                 color = COLORS.get(strategy)
@@ -95,7 +91,7 @@ def plot_sweep(sweep_dim: str, df: pd.DataFrame, out_path: str):
             ax.plot(x[valid], y[valid], marker="o", linewidth=2, markersize=5,
                     color=color, label=strategy)
 
-            # 95% CI shading
+            
             lo = y - ci
             hi = y + ci
             finite_ci = ~np.isnan(ci)
@@ -103,7 +99,6 @@ def plot_sweep(sweep_dim: str, df: pd.DataFrame, out_path: str):
                 mask = valid & finite_ci
                 ax.fill_between(x[mask], lo[mask], hi[mask], alpha=0.15, color=color)
 
-        # Linear fit: FAR vs dead_ratio for PULL only
         if sweep_dim == "dead_ratio" and col == "far" and "PULL" in strategies:
             pull_sub = df[df["strategy"] == "PULL"].sort_values("sweep_value")
             _add_pull_linear_fit(ax,
@@ -114,7 +109,6 @@ def plot_sweep(sweep_dim: str, df: pd.DataFrame, out_path: str):
             ax.text(0.5, 0.5, "No data", transform=ax.transAxes,
                     ha="center", va="center", fontsize=12, color="gray")
         elif col == "bandwidth_mb":
-            # Note about NaN meaning
             ax.text(0.01, 0.98, "Dotted verticals = strategy did not produce data (NaN)",
                     transform=ax.transAxes, ha="left", va="top",
                     fontsize=7, color="gray", style="italic")
@@ -169,6 +163,65 @@ def plot_2d_sweep(csv_path: str, dim_x: str, dim_y: str):
         print(f"  Saved: {out_path}")
 
 
+def plot_scaling(csv_path: str):
+    df = pd.read_csv(csv_path)
+    strategies = [s for s in STRATEGY_ORDER if s in df["strategy"].unique()]
+
+    metrics = [
+        ("far_mean",                   "far_ci95",                   "False Acceptance Rate",      mticker.PercentFormatter(xmax=1)),
+        ("delay_mean_mean",            "delay_mean_ci95",            "Propagation Delay Mean (s)", None),
+        ("bandwidth_per_node_kb_mean", "bandwidth_per_node_kb_ci95", "Bandwidth per Node (KB)",    None),
+        ("coverage_rate_mean",         "coverage_rate_ci95",         "Coverage Rate (≥95% reach)", mticker.PercentFormatter(xmax=1)),
+    ]
+
+    fig, axes = plt.subplots(len(metrics), 1, figsize=(12, 4 * len(metrics)))
+    fig.suptitle("Scaling: metrics vs network size (normalised contact_rate)",
+                 fontsize=14, fontweight="bold")
+
+    for ax, (col, ci_col, ylabel, formatter) in zip(axes, metrics):
+        any_data = False
+        for strategy in strategies:
+            sub = df[df["strategy"] == strategy].sort_values("network_size")
+            x   = sub["network_size"].to_numpy()
+            y   = sub[col].to_numpy(dtype=float) if col in sub.columns else np.full(len(x), np.nan)
+            ci  = sub[ci_col].to_numpy(dtype=float) if ci_col in sub.columns else np.full(len(x), np.nan)
+
+            valid = ~np.isnan(y)
+            nan_x = x[~valid]
+            color = COLORS.get(strategy)
+            for nx in nan_x:
+                ax.axvline(nx, color=color, linewidth=0.5, alpha=0.3, linestyle=":")
+
+            if not valid.any():
+                continue
+            any_data = True
+            ax.plot(x[valid], y[valid], marker="o", linewidth=2, markersize=5,
+                    color=color, label=strategy)
+            mask = valid & ~np.isnan(ci)
+            if mask.any():
+                ax.fill_between(x[mask], (y - ci)[mask], (y + ci)[mask],
+                                alpha=0.15, color=color)
+
+        if not any_data:
+            ax.text(0.5, 0.5, "No data", transform=ax.transAxes,
+                    ha="center", va="center", fontsize=12, color="gray")
+
+        ax.set_xscale("log")
+        ax.set_xlabel("Network size (nodes)")
+        ax.set_ylabel(ylabel)
+        ax.set_title(ylabel, fontsize=11)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=9)
+        if formatter:
+            ax.yaxis.set_major_formatter(formatter)
+
+    plt.tight_layout()
+    out_path = os.path.join(RESULTS_DIR, "scaling_network_size.png")
+    plt.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f"  Saved: {out_path}")
+
+
 def main():
     sweep_dims = list(X_LABELS.keys())
     for sweep_dim in sweep_dims:
@@ -179,6 +232,13 @@ def main():
         df = pd.read_csv(csv_path)
         out_path = os.path.join(RESULTS_DIR, f"sweep_{sweep_dim}.png")
         plot_sweep(sweep_dim, df, out_path)
+
+    scaling_csv = os.path.join(RESULTS_DIR, "scaling_network_size.csv")
+    if os.path.exists(scaling_csv):
+        plot_scaling(scaling_csv)
+    else:
+        print("  Skipping scaling plot — CSV not found: scaling_network_size.csv")
+        print("  Run: python experiments/run_scaling.py")
 
     sweeps_2d = [
         ("ttl", "dead_ratio"),

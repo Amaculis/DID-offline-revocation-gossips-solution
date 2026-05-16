@@ -92,10 +92,11 @@ def _aggregate(results: list[dict | None]) -> dict:
     return out
 
 
-def run_scaling(sizes: list[int], seeds: list[int], pool) -> pd.DataFrame:
+def run_scaling(sizes: list[int], seeds: list[int], pool,
+                min_contact_rate: float = 0.0) -> pd.DataFrame:
     rows = []
     for n in sizes:
-        contact_rate = BASE_N * BASE_CR / n
+        contact_rate = max(BASE_N * BASE_CR / n, min_contact_rate)
         params = {**BASE, "network_size": n, "contact_rate": contact_rate}
         for strategy in RUNNERS:
             print(f"  {strategy:<8} | N={n:>8,}  contact_rate={contact_rate:.2e}  ({len(seeds)} seeds)",
@@ -176,10 +177,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--max-n", type=int, default=1_000_000,
                         help="Largest network size to test (default: 1_000_000)")
-    parser.add_argument("--runs", type=int, default=3,
-                        help="Seeds per point (default: 3)")
+    parser.add_argument("--runs", type=int, default=5,
+                        help="Seeds per point (default: 5)")
     parser.add_argument("--workers", type=int, default=None,
                         help="Parallel workers (default: cpu_count)")
+    parser.add_argument("--min-contact-rate", type=float, default=0.0,
+                        help="Floor for contact_rate (default: 0, i.e. no floor). "
+                             "Example: --min-contact-rate 1e-5 keeps GOSSIP viable at large N")
     args = parser.parse_args()
 
     seeds   = BASE_SEEDS[:args.runs]
@@ -188,10 +192,11 @@ def main():
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     print(f"Workers: {workers}  |  Seeds: {len(seeds)}  |  Sizes: {sizes}")
-    print(f"sim_duration: {BASE['sim_duration']}s (1 day)  |  contact_rate normalised to N=500 baseline")
+    print(f"sim_duration: {BASE['sim_duration']}s  |  contact_rate normalised to N=500 baseline"
+          + (f"  |  min_contact_rate={args.min_contact_rate:.2e}" if args.min_contact_rate else ""))
 
     with Pool(processes=workers) as pool:
-        df = run_scaling(sizes, seeds, pool)
+        df = run_scaling(sizes, seeds, pool, min_contact_rate=args.min_contact_rate)
 
     csv_path = os.path.join(RESULTS_DIR, "scaling_network_size.csv")
     df.to_csv(csv_path, index=False)

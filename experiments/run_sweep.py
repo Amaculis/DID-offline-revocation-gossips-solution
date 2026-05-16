@@ -36,13 +36,13 @@ BASE_CONTACT_RATE = 1 / 600       # default contact_rate per node
 BASE_NETWORK_SIZE = BASE["network_size"]  # 500
 
 SWEEPS = {
-    "dead_ratio":            [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
-    "offline_ratio":         [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95],
-    "revocation_rate":       [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
-    "ttl":                   [60, 120, 360, 720, 1440, 2880, 3600, 4320, 7200, 14400, 28800, 43200, 57600, 86400],
+    #"dead_ratio":            [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
+    #"offline_ratio":         [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95],
+    #"revocation_rate":       [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0],
+    #"ttl":                   [60, 120, 360, 720, 1440, 2880, 3600, 4320, 7200, 14400, 28800, 43200, 57600, 86400],
     "network_size":          [50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7000, 10000, 20000, 30000, 40000, 50000],
-    "mean_offline_duration": [600, 1800, 3600, 7200, 14400, 28800, 43200, 86400],
-    "mean_online_duration":  [300, 600, 1200, 1800, 3600, 7200, 14400, 28800],
+    #"mean_offline_duration": [600, 1800, 3600, 7200, 14400, 28800, 43200, 86400],
+   # "mean_online_duration":  [300, 600, 1200, 1800, 3600, 7200, 14400, 28800],
         }
 
 SWEEPS_2D = {
@@ -86,11 +86,6 @@ SWEEPS_2D_new = {
 }
 
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
-
-
-
-# Worker — must be a top-level function so multiprocessing can pickle it
-
 
 _NO_CONTACT_RATE = {"PULL", "PUSH"}
 
@@ -149,7 +144,6 @@ def _aggregate(rows: list[dict], n_runs: int) -> dict:
 
 def _run_point(strategy: str, params: dict, seeds: list, pool,
                cv_threshold: float = 1.0, max_seeds: list | None = None) -> dict:
-    """Run seeds in parallel; if FAR CV exceeds threshold, add more seeds up to max_seeds."""
     tasks = [(strategy, params, s) for s in seeds]
     raw = [r for r in pool.map(_worker, tasks) if r is not None]
     rows = [_extract_row(r) for r in raw]
@@ -177,17 +171,12 @@ def _run_point(strategy: str, params: dict, seeds: list, pool,
 def _apply_sweep_param(params: dict, sweep_dim: str, value) -> dict:
     params = {**params, sweep_dim: value}
     if sweep_dim == "offline_ratio" and 0.0 < value < 1.0:
-        # Adjust mean_offline_duration so steady-state matches the target ratio:
-        # ratio = mean_offline / (mean_online + mean_offline)
+    
         mean_online = params.get("mean_online_duration", 3600)
         params["mean_offline_duration"] = mean_online * value / (1.0 - value)
     elif sweep_dim == "offline_ratio" and value == 0.0:
-        # All nodes always online — set a very short offline duration (practically never offline)
-        params["mean_offline_duration"] = 1.0
+         params["mean_offline_duration"] = 1.0
     if sweep_dim == "network_size":
-        # Normalize contact_rate so total gossip bandwidth stays constant:
-        # base_total_rate = BASE["network_size"] * BASE_CONTACT_RATE
-        # contact_rate = base_total_rate / value
         params["contact_rate"] = BASE_NETWORK_SIZE * BASE_CONTACT_RATE / value
     return params
 
