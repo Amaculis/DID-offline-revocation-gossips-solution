@@ -1,5 +1,38 @@
 # DID Offline Revocation — Gossip Simulation
 
+## Arhitektūra
+
+### Projekta struktūra
+
+```text
+sim/
+├── common/
+│   ├── models.py          # Datu klases: StatusList, RevocationEvent, VerificationAttempt, NodeStats
+│   ├── issuer.py          # Issuer — ģenerē revokācijas, apkalpo PUSH abonentus
+│   ├── metrics.py         # summarize(), propagation_delay(), false_acceptance_rate(), bandwidth_per_node()
+│   └── network.py         # build_graph(), assign_initial_states(), assign_dead_nodes()
+├── strategies/
+│   ├── pull.py            # PullNode — periodiski fetch no Issuer (TTL-balstīts)
+│   ├── push.py            # PushNode — saņem push no Issuer pie reconnect
+│   ├── gossip.py          # GossipNode — P2P gossip starp verifikatoriem
+│   ├── holder_gossip.py   # HolderGossipNode + HolderNode — gossip + holder prezentācijas
+│   ├── push_holder_gossip.py  # PushHolderGossipNode — PUSH + P2P gossip + holder
+│   └── verification_gossip.py # VerificationGossipNode — verifikācijas gossip (eksperimentāls)
+├── run_pull.py            # Runner: PULL stratēģija
+├── run_push.py            # Runner: PUSH stratēģija
+├── run_gossip.py          # Runner: tīrs P2P gossip
+├── run_holder_gossip.py   # Runner: GOSSIP + holder prezentācijas
+├── run_push_holder_gossip.py  # Runner: MIXED (PUSH + GOSSIP + holder)
+└── run_verification_gossip.py # Runner: verifikācijas gossip
+experiments/
+├── run_sweep.py           # 1D/2D parametru slaucījumi ar multiprocessing
+├── run_scaling.py         # Tīkla izmēru skalēšanas testi (līdz 1M mezgliem)
+├── run_averaged.py        # Ātrs N-seed vidējo rādītāju tests
+├── plot_results.py        # Vizualizācija no CSV failiem
+└── results/               # CSV un PNG izejas faili
+```
+
+
 ## Noklusētās simulācijas
 
 Vienu reizi palaiž visas aktīvās stratēģijas un izdrukā salīdzināšanas tabulu.
