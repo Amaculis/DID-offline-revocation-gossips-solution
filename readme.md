@@ -32,6 +32,67 @@ experiments/
 └── results/               # CSV un PNG izejas faili
 ```
 
+### Simulācijas mehānisms
+
+Simulācija izmanto **SimPy** — diskrētā laika notikumu simulācijas bibliotēku. Katrs mezgls ir neatkarīgs SimPy process.
+
+```text
+Issuer
+  │  revokācija (Poisson process, rate = revocation_rate)
+  │  → StatusList (versija, revoked_ids, issued_at, ttl)
+  │
+  ├── PULL:  mezgli periodiski fetch (ik CHECK_INTERVAL=300s, ja online un saraksts beidzies)
+  ├── PUSH:  Issuer push pie revokācijas → tikai online + nav dead mezgļi
+  └── GOSSIP: seed mezgli fetch → izplata P2P (eksponenciāls kontaktu ātrums, contact_rate)
+```
+
+### Mezgla stāvokļi
+
+Katram mezglam ir divi neatkarīgi bināri atribūti:
+
+| Atribūts | Vērtības | Nozīme |
+| --- | --- | --- |
+| `is_online` | True/False | Savienojums ar Issuer. Pārslēdzas eksponenciāli (mean_online / mean_offline) |
+| `is_dead` | True/False | Nav Issuer piekļuves **nekad** — tikai P2P gossip. Pastāvīgs visas simulācijas laikā |
+
+`is_online` ietekmē tikai Issuer saziņu (PULL fetch, PUSH saņemšana). P2P gossip notiek neatkarīgi no `is_online`.
+
+### Sēklas mezgli (seed nodes)
+
+GOSSIP un MIXED stratēģijās `seed_ratio` (noklusēti 1%) mezglu ir tieša Issuer piekļuve. Tikai šie mezgli periodiski fetch jauno StatusList un tad izplata to pārējiem caur gossip. Tas modelē reālo scenāriju, kur lielākā daļa mezglu nav tieši savienoti ar Issuer.
+
+### Holder prezentācijas (GOSSIP, MIXED)
+
+HolderNode periodiski (mean_presentation_interval) piesakās pie nejaušu verifikātoru (~6 kaimiņi). Notikumā:
+
+1. Ja holder versija > verifikatora versija un saraksts vēl nav beidzies → holder pārsūta savu sarakstu verifikatoram
+2. Ja verifikatora versija > holder versija → verifikators pārsūta savu sarakstu holderim
+3. Verifikators reģistrē verifikācijas mēģinājumu (`is_presentation=True`)
+
+### Galvenie mērījumi
+
+| Metrika | Apraksts |
+| --- | --- |
+| `false_acceptance_rate` (FAR) | Daļa no verifikācijām, kur mezgls nepareizi pieņēma atceltus akreditācijas datus |
+| `propagation_delay_mean_s` | Vidējais laiks no revokācijas līdz 95% mezglu informētībai (izslēdzot dead mezglus) |
+| `bandwidth_per_node_kb` | Vidējais pārsūtīto baitu skaits uz mezglu (tikai saņēmēja puse) |
+| `coverage_rate` | Daļa revokāciju, kas sasniedza 95% pārklājumu simulācijas laikā |
+
+### Parametri
+
+| Parametrs | Noklusējums | Apraksts |
+| --- | --- | --- |
+| `network_size` | 500 | Verifikatoru skaits |
+| `dead_ratio` | 0.1 | Daļa mezglu bez Issuer piekļuves |
+| `offline_ratio` | 0.2 | Sākotnējā daļa offline mezglu (arī nosaka steady-state) |
+| `ttl` | 28800 | StatusList derīguma laiks (sekundēs) |
+| `revocation_rate` | 0.001 | Revokāciju biežums (notikumi/s) |
+| `mean_online_duration` | 3600 | Vidējais online periods (s) |
+| `mean_offline_duration` | 14400 | Vidējais offline periods (s) |
+| `contact_rate` | 1/600 | Gossip kontaktu biežums uz mezglu (kontakti/s) |
+| `seed_ratio` | 0.01 | Daļa mezglu ar tiešu Issuer piekļuvi (GOSSIP/MIXED) |
+
+---
 
 ## Noklusētās simulācijas
 
