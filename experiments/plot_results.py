@@ -11,10 +11,11 @@ COLORS = {
     "PULL":   "#534AB7",
     "PUSH":   "#D85A30",
     "GOSSIP": "#0F6E56",
+    "HIBRĪDA":  "#185FA5",
     "MIXED":  "#185FA5",
 }
 
-STRATEGY_ORDER = ["PULL", "PUSH", "GOSSIP", "MIXED"]
+STRATEGY_ORDER = ["PULL", "PUSH", "GOSSIP", "HIBRĪDA","MIXED"]
 
 X_LABELS = {
     "dead_ratio":            "Dead ratio",
