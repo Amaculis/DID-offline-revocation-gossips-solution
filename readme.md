@@ -1,186 +1,377 @@
-# 1MPD — Transportlīdzekļu maršrutēšanas problēma ar Simulētās dzesēšanas algoritmu
+# DID Offline Revocation — Gossip Propagation Simulator
 
-> **Mazais praktiskais darbs** — Praktiskā kombinatoriālā optimizācija  
-> Students: `am21169`
-
----
-
-## 🇱🇻 Latviešu valodā
-
-### Apraksts
-
-Šis projekts risina **Transportlīdzekļu maršrutēšanas problēmu (VRP)** izmantojot **Simulētās dzesēšanas (Simulated Annealing, SA)** metaheiristisko algoritmu.
-
-Programma ģenerē nejaušus piegādes punktus 2D plaknē un meklē optimālus maršrutus vienam vai vairākiem transportlīdzekļiem, ievērojot katram transportlīdzeklim noteikto degvielas ierobežojumu. Galvenais mērķis — apmeklēt pēc iespējas vairāk punktu ar minimālu kopējo nobraukumu.
-
-### Kā darbojas algoritms
-
-1. **Sākumrisinājums** — punkti tiek sadalīti starp transportlīdzekļiem, ievērojot degvielas limitus.
-2. **Kaimiņrisinājumu ģenerēšana** — katrā iterācijā tiek nejauši piemērota viena no operācijām:
-   - `add_unvisited` — pievieno neapmeklētu punktu kādam maršrutam
-   - `move` — pārvieto punktu no viena maršruta uz citu
-   - `remove` — izņem punktu no maršruta
-   - `swap` — maina divus punktus vietām vienā maršrutā
-   - `2-opt` — apgriež maršruta apakšsegmentu, samazinot krustošanās
-3. **Pieņemšanas kritērijs** — labāks risinājums vienmēr tiek pieņemts; sliktāks — ar varbūtību `exp(-Δ/T)`.
-4. **Temperatūras samazināšana** — `T = T * cooling_rate` pēc katras iterācijas.
-5. **Apstāšanās** — kad temperatūra nokrītas zem `MIN_TEMP` vai sasniegts `MAX_ITERATIONS`.
-
-### Izmaksas
-
-Kopējās izmaksas = kopējais maršruta garums + sodi:
-- **Sods par neapmeklētu punktu**: `PENALTY_PER_POINT` par katru izlaisto punktu
-- **Sods par limita pārsniegšanu**: `300 × (garums - limits)` par katru pārsniegumu
-
-### Prasības
-
-- Python 3.8+
-- `matplotlib`
-
-Instalēšana:
-```bash
-pip install matplotlib
-```
-
-### Palaišana
-
-```bash
-python am21169.py
-```
-
-Programma nolasa parametrus no `config.json` faila, kas atrodas tajā pašā mapē.
-
-### Konfigurācija (`config.json`)
-
-| Parametrs | Noklusējums | Apraksts |
-|---|---|---|
-| `N_POINTS` | `20` | Piegādes punktu skaits |
-| `N_VEHICLES` | `1` | Transportlīdzekļu skaits |
-| `VEHICLE_LIMITS` | `[1500]` | Degvielas ierobežojums katram transportlīdzeklim |
-| `PENALTY_PER_POINT` | `100` | Sods par katru neapmeklētu punktu |
-| `DEPOT` | `[0, 0]` | Depo koordinātes |
-| `INITIAL_TEMP` | `10000` | Sākuma temperatūra SA algoritmam |
-| `COOLING_RATE` | `0.999` | Atvēsināšanas koeficients (0–1) |
-| `MIN_TEMP` | `1` | Minimālā temperatūra, pie kuras apstājas |
-| `MAX_ITERATIONS` | `15000` | Maksimālais iterāciju skaits |
-| `VISUAL` | `false` | Vizualizācija ar matplotlib (`true`/`false`) |
-| `ADD_DESCRIPTION` | `false` | Detalizēta izdruka par katru mašīnu (`true`/`false`) |
-
-**Piemērs ar vairākiem transportlīdzekļiem:**
-```json
-{
-  "N_POINTS": 30,
-  "N_VEHICLES": 3,
-  "VEHICLE_LIMITS": [800, 800, 800],
-  "PENALTY_PER_POINT": 100,
-  "DEPOT": [0, 0],
-  "INITIAL_TEMP": 10000,
-  "COOLING_RATE": 0.999,
-  "MIN_TEMP": 1,
-  "MAX_ITERATIONS": 20000,
-  "VISUAL": true,
-  "ADD_DESCRIPTION": true
-}
-```
-
-### Failu struktūra
-
-```
-1mpd_am21169/
-├── am21169.py          # Galvenais skripts ar SA algoritmu
-├── config.json         # Konfigurācijas parametri
-└── 1mpd_am21169.pdf    # Uzdevuma apraksts
-```
+> Simulation framework for comparing credential revocation propagation strategies in decentralised Self-Sovereign Identity (SSI) systems.  
+> Research context: Master's thesis — Riga Technical University, Cybersecurity.
 
 ---
 
 ## 🇬🇧 English
 
-### Description
+### Overview
 
-This project solves the **Vehicle Routing Problem (VRP)** using the **Simulated Annealing (SA)** metaheuristic algorithm.
+In Self-Sovereign Identity (SSI) systems, verifiers must be able to check whether a credential has been revoked before accepting it. The standard approach relies on fetching a **StatusList** from a central Issuer — but this breaks down when verifiers are **offline or have limited connectivity**.
 
-The program generates random delivery points on a 2D plane and searches for optimal routes for one or more vehicles, respecting per-vehicle fuel (distance) limits. The primary goal is to visit as many points as possible with minimum total travel distance.
+This project simulates and compares five revocation propagation strategies for decentralised verifier networks:
 
-### How the algorithm works
+| Strategy | Description |
+|---|---|
+| **PULL** | Verifiers periodically fetch the StatusList from the Issuer (TTL-based polling) |
+| **PUSH** | Issuer actively pushes updates to online verifiers upon revocation |
+| **GOSSIP** | Peer-to-peer gossip propagation between verifiers; a small set of seed nodes fetch from the Issuer |
+| **GOSSIP + Holder** | Gossip extended with credential holders piggybacking StatusList updates during presentation |
+| **PUSH + GOSSIP + Holder** | Hybrid combining Issuer push, P2P gossip, and holder-assisted propagation |
 
-1. **Initial solution** — points are greedily distributed among vehicles while respecting fuel limits.
-2. **Neighbour generation** — at each iteration, one random operation is applied:
-   - `add_unvisited` — insert an unvisited point into a route
-   - `move` — transfer a point from one vehicle's route to another
-   - `remove` — drop a point from a route (it becomes unvisited)
-   - `swap` — swap two points within the same route
-   - `2-opt` — reverse a sub-segment of a route to eliminate crossings
-3. **Acceptance criterion** — a better solution is always accepted; a worse one is accepted with probability `exp(-Δ/T)`.
-4. **Cooling** — `T = T * cooling_rate` after each iteration.
-5. **Termination** — when temperature drops below `MIN_TEMP` or `MAX_ITERATIONS` is reached.
+Each strategy is evaluated against four key metrics: **False Acceptance Rate (FAR)**, **propagation delay**, **bandwidth per node**, and **coverage rate** — across a range of network conditions (node availability, TTL, network size, revocation rate).
 
-### Cost function
+### Key Concepts
 
-Total cost = total route length + penalties:
-- **Unvisited point penalty**: `PENALTY_PER_POINT` per skipped point
-- **Limit violation penalty**: `300 × (length - limit)` per vehicle over its limit
+**Dead nodes** — verifiers with no Issuer connectivity whatsoever; they can only receive updates via P2P gossip or holder presentations.
+
+**Seed nodes** — in gossip-based strategies, a configurable fraction of nodes (`seed_ratio`, default 1%) maintain direct Issuer access and act as the entry point for new revocation data into the gossip network.
+
+**Holder presentations** — in GOSSIP and MIXED strategies, holders periodically contact a random subset of verifiers. If the holder carries a fresher StatusList than the verifier, it shares it (and vice versa), effectively turning every credential presentation into a gossip exchange.
 
 ### Requirements
 
-- Python 3.8+
-- `matplotlib`
-
-Install dependencies:
-```bash
-pip install matplotlib
-```
-
-### Running
+- Python 3.10+
+- Dependencies:
 
 ```bash
-python am21169.py
+pip install -r requirements.txt
+# simpy==4.1.1  networkx==3.3  matplotlib==3.9.0  pandas==2.2.2
 ```
 
-The program reads all parameters from `config.json` in the same directory.
+### Quick Start
 
-### Configuration (`config.json`)
+```bash
+# Clone and install
+git clone https://github.com/Amaculis/DID-offline-revocation-gossips-solution.git
+cd DID-offline-revocation-gossips-solution
+pip install -r requirements.txt
+
+# Run all strategies with default parameters and print a comparison table
+python main.py
+```
+
+> **Note:** At 500 nodes each strategy takes ~30 seconds. At 5 000 nodes expect ~20 minutes per strategy. For large-scale experiments use `--workers` parallelism described below.
+
+### Project Structure
+
+```
+DID-offline-revocation-gossips-solution/
+├── main.py                        # Entry point — runs all strategies, prints comparison table
+├── requirements.txt
+├── pyproject.toml
+├── sim/
+│   ├── common/
+│   │   ├── models.py              # Data classes: StatusList, RevocationEvent, VerificationAttempt, NodeStats
+│   │   ├── issuer.py              # Issuer process — generates revocations, serves PUSH subscribers
+│   │   ├── metrics.py             # summarize(), propagation_delay(), false_acceptance_rate(), bandwidth_per_node()
+│   │   └── network.py             # build_graph(), assign_initial_states(), assign_dead_nodes()
+│   ├── strategies/
+│   │   ├── pull.py                # PullNode — periodic fetch from Issuer (TTL-based)
+│   │   ├── push.py                # PushNode — receives push from Issuer on reconnect
+│   │   ├── gossip.py              # GossipNode — P2P gossip between verifiers
+│   │   ├── holder_gossip.py       # HolderGossipNode + HolderNode — gossip + holder presentations
+│   │   ├── push_holder_gossip.py  # PushHolderGossipNode — PUSH + P2P gossip + holder
+│   │   └── verification_gossip.py # VerificationGossipNode — verification-triggered gossip (experimental)
+│   ├── run_pull.py
+│   ├── run_push.py
+│   ├── run_gossip.py
+│   ├── run_holder_gossip.py
+│   ├── run_push_holder_gossip.py
+│   └── run_verification_gossip.py
+├── experiments/
+│   ├── run_sweep.py               # 1D/2D parameter sweeps with multiprocessing
+│   ├── run_scaling.py             # Network size scaling tests (up to 1M nodes)
+│   ├── run_averaged.py            # Quick N-seed averaged baseline test
+│   ├── plot_results.py            # Generate PNG charts from CSV results
+│   └── results/                   # Output CSV and PNG files
+└── graphs/                        # Architecture and flow diagrams
+```
+
+### Simulation Engine
+
+The simulator is built on **SimPy** (discrete-event simulation). Each node runs as an independent SimPy process. Revocations are generated by the Issuer as a Poisson process at rate `revocation_rate`.
+
+```
+Issuer
+  │  revocation event (Poisson, rate = revocation_rate)
+  │  → StatusList (version, revoked_ids, issued_at, ttl)
+  │
+  ├── PULL:   nodes fetch periodically (every CHECK_INTERVAL=300s, if online and TTL expired)
+  ├── PUSH:   Issuer pushes on revocation → online non-dead nodes only
+  └── GOSSIP: seed nodes fetch → spread P2P (exponential contact rate, contact_rate)
+```
+
+### Node States
+
+Each node has two independent binary attributes:
+
+| Attribute | Values | Meaning |
+|---|---|---|
+| `is_online` | True / False | Whether the node has a live connection to the Issuer. Toggles exponentially (mean_online / mean_offline) |
+| `is_dead` | True / False | Node has **no Issuer access ever** — only reachable via P2P gossip. Permanent for the simulation lifetime |
+
+`is_online` affects only Issuer communication (PULL fetches, PUSH reception). P2P gossip operates independently of `is_online`.
+
+### Metrics
+
+| Metric | Description |
+|---|---|
+| `false_acceptance_rate` (FAR) | Fraction of verifications where a revoked credential was incorrectly accepted |
+| `propagation_delay_mean_s` | Mean time from revocation event until 95% of nodes (excluding dead) are informed |
+| `bandwidth_per_node_kb` | Mean bytes received per node across the simulation |
+| `coverage_rate` | Fraction of revocations that reached 95% node coverage within the simulation window |
+
+### Simulation Parameters
 
 | Parameter | Default | Description |
 |---|---|---|
-| `N_POINTS` | `20` | Number of delivery points |
-| `N_VEHICLES` | `1` | Number of vehicles |
-| `VEHICLE_LIMITS` | `[1500]` | Max distance (fuel) per vehicle |
-| `PENALTY_PER_POINT` | `100` | Penalty per unvisited point |
-| `DEPOT` | `[0, 0]` | Depot coordinates |
-| `INITIAL_TEMP` | `10000` | Starting temperature for SA |
-| `COOLING_RATE` | `0.999` | Cooling coefficient (0–1) |
-| `MIN_TEMP` | `1` | Minimum temperature before stopping |
-| `MAX_ITERATIONS` | `15000` | Maximum number of iterations |
-| `VISUAL` | `false` | Show matplotlib visualization (`true`/`false`) |
-| `ADD_DESCRIPTION` | `false` | Print per-vehicle detailed stats (`true`/`false`) |
+| `network_size` | 500 | Number of verifier nodes |
+| `dead_ratio` | 0.1 | Fraction of nodes with no Issuer access |
+| `offline_ratio` | 0.2 | Initial fraction of offline nodes (also determines steady-state) |
+| `ttl` | 28800 | StatusList validity duration (seconds) |
+| `revocation_rate` | 0.001 | Revocation events per second |
+| `mean_online_duration` | 3600 | Mean online period (seconds) |
+| `mean_offline_duration` | 14400 | Mean offline period (seconds) |
+| `contact_rate` | 1/600 | Gossip contact rate per node (contacts/second) |
+| `seed_ratio` | 0.01 | Fraction of nodes with direct Issuer access (GOSSIP/MIXED only) |
 
-**Example with multiple vehicles:**
-```json
-{
-  "N_POINTS": 30,
-  "N_VEHICLES": 3,
-  "VEHICLE_LIMITS": [800, 800, 800],
-  "PENALTY_PER_POINT": 100,
-  "DEPOT": [0, 0],
-  "INITIAL_TEMP": 10000,
-  "COOLING_RATE": 0.999,
-  "MIN_TEMP": 1,
-  "MAX_ITERATIONS": 20000,
-  "VISUAL": true,
-  "ADD_DESCRIPTION": true
-}
+Edit `PARAMS` in `main.py` to adjust these for a single run.
+
+---
+
+### Running Experiments
+
+#### Single run — all strategies
+
+```bash
+python main.py
 ```
 
-### File structure
+Prints a side-by-side comparison table of all metrics for each strategy.
+
+#### Multi-seed averaged run
+
+Runs each strategy N times with different random seeds and reports the mean of all metrics. Useful for a quick sanity check before a full sweep.
+
+```bash
+# Default: 5 seeds
+python experiments/run_averaged.py
+
+# Custom seed count
+python experiments/run_averaged.py --runs 20
+```
+
+#### Parameter sweep (1D / 2D)
+
+Sweeps each parameter dimension independently, saves CSV and PNG outputs to `experiments/results/`.
+
+```bash
+# Full sweep, 10 seeds per point, uniform (no adaptive), 8 workers
+python experiments/run_sweep.py --runs 10 --no-adaptive --workers 8
+
+# Specific dimensions only
+python experiments/run_sweep.py --runs 10 --no-adaptive --dims dead_ratio offline_ratio ttl
+
+# 2D sweep (TTL × dead_ratio)
+python experiments/run_sweep.py --runs 10 --no-adaptive --2d --workers 8
+
+# Adaptive mode — adds extra seeds at high-variance points (CV > 1.0 → up to 15 seeds)
+python experiments/run_sweep.py --runs 5 --max-runs 15 --cv-threshold 1.0 --workers 8
+```
+
+**CLI flags:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--runs N` | 5 | Seeds per sweep point |
+| `--max-runs N` | 15 | Max seeds for high-CV points (adaptive mode) |
+| `--cv-threshold F` | 1.0 | Coefficient of variation above which extra seeds are added |
+| `--no-adaptive` | off | Disable adaptive seeds — uniform n_runs everywhere |
+| `--workers N` | cpu_count | Parallel worker processes |
+| `--dims` | all | Space-separated list of dimensions to sweep |
+| `--2d` | off | Also run 2D sweep (TTL × dead_ratio) |
+
+**Available sweep dimensions:** `dead_ratio`, `offline_ratio`, `revocation_rate`, `ttl`, `network_size`, `mean_offline_duration`, `mean_online_duration`
+
+> `offline_ratio` automatically adjusts `mean_offline_duration` to maintain the desired steady-state ratio: `mean_offline = mean_online × ratio / (1 − ratio)`  
+> `network_size` automatically normalises `contact_rate` to keep realistic interaction frequency.
+
+#### Network scaling test
+
+Tests propagation delay and FAR for networks up to 1 000 000 nodes, using a 1-day simulation window and normalised contact rates.
+
+```bash
+# Up to 100 000 nodes (a few minutes)
+python experiments/run_scaling.py --max-n 100000 --runs 3 --workers 8
+
+# Full run up to 1 000 000 nodes (20–40 minutes)
+python experiments/run_scaling.py --runs 3 --workers 8
+
+# Custom
+python experiments/run_scaling.py --max-n 10000 --runs 5 --workers 4
+```
+
+Saves `experiments/results/scaling_network_size.csv` and `scaling_network_size.png`.
+
+#### Visualise results
+
+Generates PNG charts from all existing CSV files in `experiments/results/`.
+
+```bash
+python experiments/plot_results.py
+```
+
+Produces per-dimension plots with 95% confidence interval bands, NaN annotations, and a linear fit for PULL FAR vs dead_ratio. If a 2D sweep CSV exists, also generates `sweep2d_far.png` and `sweep2d_delay.png`.
+
+For 2D heatmaps with more control:
+
+```bash
+# FAR heatmap (default)
+python experiments/plot_heatmap_2d.py
+
+# Propagation delay
+python experiments/plot_heatmap_2d.py --metric delay_mean_mean
+
+# Bandwidth
+python experiments/plot_heatmap_2d.py --metric bandwidth_per_node_kb_mean
+
+# All 4 strategies on a shared colour scale
+python experiments/plot_heatmap_2d.py --metric far_mean --shared-scale
+
+# Custom input/output paths
+python experiments/plot_heatmap_2d.py --csv my_data.csv --output result.png
+```
+
+### Output Files
+
+All outputs are saved to `experiments/results/`:
+
+| File | Description |
+|---|---|
+| `sweep_{dim}.csv` | 1D sweep results — mean, std, CI95 per metric per strategy |
+| `sweep_{dim}.png` | Charts with 95% CI bands |
+| `sweep2d_ttl_x_dead_ratio.csv` | 2D sweep results |
+| `sweep2d_far.png` | FAR heatmap |
+| `sweep2d_delay.png` | Propagation delay heatmap |
+| `scaling_network_size.csv` | Network size scaling results |
+| `scaling_network_size.png` | Scaling plot vs O(log n) curve |
+
+---
+
+## 🇱🇻 Latviešu valodā
+
+### Pārskats
+
+Pašpārvaldāmās identitātes (SSI) sistēmās verifikatoriem jāspēj pārbaudīt, vai akreditācijas dati ir atcelti, pirms tos pieņem. Standarta pieeja — ielādēt **StatusList** no centrālā Izdevēja — nedarbojas, ja verifikators ir **bezsaistē vai tam ierobežota savienojamība**.
+
+Šis projekts simulē un salīdzina piecas revokācijas izplatīšanas stratēģijas decentralizētiem verifikatoru tīkliem:
+
+| Stratēģija | Apraksts |
+|---|---|
+| **PULL** | Verifikatori periodiski ielādē StatusList no Izdevēja (TTL-balstīta aptauja) |
+| **PUSH** | Izdevējs aktīvi nosūta atjauninājumus tiešsaistes verifikatoriem pie revokācijas |
+| **GOSSIP** | P2P gossip izplatīšana starp verifikatoriem; neliela daļa sēklu mezglu ielādē no Izdevēja |
+| **GOSSIP + Holder** | Gossip papildināts ar akreditācijas datu turētājiem, kas nodod StatusList prezentācijas laikā |
+| **PUSH + GOSSIP + Holder** | Hibrīds, kas apvieno Izdevēja push, P2P gossip un holder-palīdzētu izplatīšanu |
+
+### Arhitektūra
+
+#### Simulācijas mehānisms
+
+Simulācija izmanto **SimPy** — diskrētā laika notikumu simulācijas bibliotēku. Katrs mezgls ir neatkarīgs SimPy process. Revokācijas ģenerē Izdevējs kā Puasona procesu ar ātrumu `revocation_rate`.
+
+#### Mezgla stāvokļi
+
+Katram mezglam ir divi neatkarīgi bināri atribūti:
+
+| Atribūts | Vērtības | Nozīme |
+|---|---|---|
+| `is_online` | True/False | Savienojums ar Izdevēju. Pārslēdzas eksponenciāli (mean_online / mean_offline) |
+| `is_dead` | True/False | Nav Izdevēja piekļuves nekad — tikai P2P gossip. Pastāvīgs visas simulācijas laikā |
+
+`is_online` ietekmē tikai Izdevēja saziņu. P2P gossip notiek neatkarīgi.
+
+#### Sēklas mezgli (seed nodes)
+
+GOSSIP un MIXED stratēģijās `seed_ratio` (noklusēti 1%) mezglu ir tieša Izdevēja piekļuve. Tikai šie mezgli periodiski ielādē jauno StatusList un izplata to pārējiem caur gossip.
+
+#### Holder prezentācijas
+
+HolderNode periodiski kontaktējas ar nejaušiem verifikatoriem. Ja holder versija ir jaunāka — nodod to verifikatoram, un otrādi. Verifikators reģistrē verifikācijas mēģinājumu.
+
+### Projekta struktūra
 
 ```
-1mpd_am21169/
-├── am21169.py          # Main script with SA algorithm
-├── config.json         # Configuration parameters
-└── 1mpd_am21169.pdf    # Assignment description
+sim/
+├── common/
+│   ├── models.py          # Datu klases: StatusList, RevocationEvent, VerificationAttempt, NodeStats
+│   ├── issuer.py          # Izdevējs — ģenerē revokācijas, apkalpo PUSH abonentus
+│   ├── metrics.py         # summarize(), propagation_delay(), false_acceptance_rate(), bandwidth_per_node()
+│   └── network.py         # build_graph(), assign_initial_states(), assign_dead_nodes()
+├── strategies/
+│   ├── pull.py            # PullNode — periodiski fetch no Izdevēja (TTL-balstīts)
+│   ├── push.py            # PushNode — saņem push no Izdevēja pie reconnect
+│   ├── gossip.py          # GossipNode — P2P gossip starp verifikatoriem
+│   ├── holder_gossip.py   # HolderGossipNode + HolderNode — gossip + holder prezentācijas
+│   ├── push_holder_gossip.py  # PushHolderGossipNode — PUSH + P2P gossip + holder
+│   └── verification_gossip.py # VerificationGossipNode — verifikācijas gossip (eksperimentāls)
+├── run_pull.py            # Runner: PULL stratēģija
+├── run_push.py            # Runner: PUSH stratēģija
+├── run_gossip.py          # Runner: tīrs P2P gossip
+├── run_holder_gossip.py   # Runner: GOSSIP + holder prezentācijas
+├── run_push_holder_gossip.py  # Runner: MIXED (PUSH + GOSSIP + holder)
+└── run_verification_gossip.py # Runner: verifikācijas gossip
+experiments/
+├── run_sweep.py           # 1D/2D parametru slaucījumi ar multiprocessing
+├── run_scaling.py         # Tīkla izmēru skalēšanas testi (līdz 1M mezgliem)
+├── run_averaged.py        # Ātrs N-seed vidējo rādītāju tests
+├── plot_results.py        # Vizualizācija no CSV failiem
+└── results/               # CSV un PNG izejas faili
 ```
 
-### Output
+### Galvenie mērījumi
 
-The program prints a comparison between the initial and optimised solution costs, total distance, penalty breakdown, execution time, and — if `ADD_DESCRIPTION` is enabled — a per-vehicle breakdown showing route sequence, distance used, and remaining fuel capacity. If `VISUAL` is enabled, a colour-coded route map is rendered showing each vehicle's path and any unvisited points.
+| Metrika | Apraksts |
+|---|---|
+| `false_acceptance_rate` (FAR) | Daļa verifikāciju, kur atcelti akreditācijas dati tika nepareizi pieņemti |
+| `propagation_delay_mean_s` | Vidējais laiks no revokācijas līdz 95% mezglu informētībai |
+| `bandwidth_per_node_kb` | Vidējais saņemto baitu skaits uz mezglu |
+| `coverage_rate` | Daļa revokāciju, kas sasniedza 95% pārklājumu simulācijas laikā |
+
+### Parametri
+
+| Parametrs | Noklusējums | Apraksts |
+|---|---|---|
+| `network_size` | 500 | Verifikatoru skaits |
+| `dead_ratio` | 0.1 | Daļa mezglu bez Izdevēja piekļuves |
+| `offline_ratio` | 0.2 | Sākotnējā daļa offline mezglu |
+| `ttl` | 28800 | StatusList derīguma laiks (sekundēs) |
+| `revocation_rate` | 0.001 | Revokāciju biežums (notikumi/s) |
+| `mean_online_duration` | 3600 | Vidējais online periods (s) |
+| `mean_offline_duration` | 14400 | Vidējais offline periods (s) |
+| `contact_rate` | 1/600 | Gossip kontaktu biežums uz mezglu (kontakti/s) |
+| `seed_ratio` | 0.01 | Daļa mezglu ar tiešu Izdevēja piekļuvi (GOSSIP/MIXED) |
+
+### Palaišana
+
+```bash
+# Visi stratēģijas, noklusētie parametri
+python main.py
+
+# Vidējotais tests (5 seeds)
+python experiments/run_averaged.py
+
+# Parametru slaucījums
+python experiments/run_sweep.py --runs 10 --no-adaptive --workers 8
+
+# Tīkla izmēru tests
+python experiments/run_scaling.py --max-n 100000 --runs 3 --workers 8
+
+# Vizualizācija
+python experiments/plot_results.py
+```
+
+> ⚠️ **Nav ieteicams** palaist ļoti lielus tīkla izmērus bez `--workers` paralēlās izpildes. 500 mezgli ≈ 30 s/stratēģijai; 5 000 mezgli ≈ 20 min/stratēģijai.
