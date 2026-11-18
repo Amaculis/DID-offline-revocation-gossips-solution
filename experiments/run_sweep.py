@@ -17,7 +17,7 @@ RUNNERS = {
     "PULL":   run_pull,
     "PUSH":   run_push,
     "GOSSIP": run_holder_gossip,
-    "HIBRĪDA":  run_push_holder_gossip,
+    "MIXED":   run_push_holder_gossip,
 }
 
 BASE = dict(

@@ -17,7 +17,7 @@ class HolderGossipNode:
         mean_offline_duration: float = 14400,  # 4h
         contact_rate: float = 1 / 600,
         is_dead: bool = False,
-        is_seed: bool = False,  # Sēklas mezgliem ir tieša emitenta piekļuve; citi paļaujas tikai uz tenkām/turētāju apmaiņu
+        is_seed: bool = False,  # Seed nodes have direct issuer access; the rest rely on gossip / holder exchange only
     ):
         self.node_id = node_id
         self.env = env
@@ -207,7 +207,7 @@ class HolderNode:
         rng: random.Random,
         mean_online_duration: float = 3600,   # 1h
         mean_offline_duration: float = 14400,  # 4h
-        mean_presentation_interval: float = 7200,  # prezentēt akreditāciju ik pēc ~2h
+        mean_presentation_interval: float = 7200,  # present the credential roughly every 2h
         is_dead: bool = False,
     ):
         self.node_id = node_id
@@ -220,7 +220,7 @@ class HolderNode:
         self.is_dead = is_dead
 
         self.is_online = is_online
-        self.cached_list: StatusList | None = None   # sāk ar tukšu sarakstu
+        self.cached_list: StatusList | None = None   # starts with no list
         self.stats = NodeStats(node_id=node_id)
         self.verification_log: list[VerificationAttempt] = []  
         self.awareness_times: dict[int, float] = {}

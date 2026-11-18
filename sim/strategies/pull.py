@@ -4,8 +4,8 @@ import simpy
 from ..common.models import StatusList, VerificationAttempt, NodeStats
 from ..common.issuer import Issuer
 
-# Cik bieži mezgls pārbauda, vai ir jāatjauno saraksts (sekundēs simulaācijas laikā)
-CHECK_INTERVAL = 300  # Katras 5 min 
+# How often a node checks whether its list needs refreshing (simulated seconds)
+CHECK_INTERVAL = 300  # every 5 min
 
 class PullNode:
     def __init__(
@@ -15,8 +15,7 @@ class PullNode:
         issuer: Issuer,
         is_online: bool,
         rng: random.Random,
-        # vidējais laiks online / offline, kas tiek zīmēts no eksponenciālām sadalījumiem
-        
+        # mean online / offline durations, drawn from exponential distributions
         mean_online_duration: float = 3600,   # 1h
         mean_offline_duration: float = 14400,  # 4h
         is_dead: bool = False,
@@ -38,7 +37,7 @@ class PullNode:
         env.process(self._pull_process())
         env.process(self._verify_process())
 
-    # Savienojamība: Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem
+    # Connectivity: randomly toggles online/offline with the given mean time between switches
     
     def _connectivity_process(self):
         while True:
@@ -51,7 +50,7 @@ class PullNode:
                 yield self.env.timeout(duration)
                 self.is_online = True
     
-    # PULL loģika: Ik pēc noteikta laika pārbauda vai ir iespējams atjaunot sarakstu
+    # PULL logic: periodically checks whether the list can be refreshed
     def _pull_process(self):
         while True:
             yield self.env.timeout(CHECK_INTERVAL)
@@ -60,7 +59,7 @@ class PullNode:
                     self.stats.stale_hits += 1
                 continue
 
-            # Online — pārbauda, vai kešatmiņa ir novecojusi vai trūkst, un ja jā, tad atjauno
+            # Online: refresh the cache if it is missing or expired
             if not self.is_dead and (self.cached_list is None or self.cached_list.is_expired(self.env.now)):
                 self._fetch()
 
@@ -81,16 +80,14 @@ class PullNode:
             self.awareness_times.setdefault(cid, self.env.now)
 
     
-    # Peridodiska pārbaude. Reizi noteiktajā laikā pārbauda nejaušu akreditācijas datu statusu un reģistrē rezultātu, salīdzinot ar patiesību
+    # Periodic verification: checks the status of a random credential and records the result against ground truth
 
     def _verify_process(self):
         
-        mean_verify_interval = 3600 # vidēji reiz stundā verificē
+        mean_verify_interval = 3600 # verifies once per hour on average
         while True:
             delay = self.rng.expovariate(1 / mean_verify_interval)
             yield self.env.timeout(delay)
-            #if self.is_online:
-            #    self._do_verify()
             self._do_verify()
 
     def _do_verify(self):

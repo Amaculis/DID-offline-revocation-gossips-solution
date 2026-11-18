@@ -16,10 +16,10 @@ COLORS      = {
     "MIXED":  "Blues",
 }
 METRIC_LABELS = {
-    "far_mean":          "FAR (kļūdainas pieņemšanas līmenis)",
-    "delay_mean_mean":   "Izplatīšanas aizkave, vidējā (s)",
-    "bandwidth_per_node_kb_mean": "Joslas platums uz mezglu (KB)",
-    "coverage_rate_mean": "Pārklājuma līmenis (coverage rate)",
+    "far_mean":          "False acceptance rate (FAR)",
+    "delay_mean_mean":   "Mean propagation delay (s)",
+    "bandwidth_per_node_kb_mean": "Bandwidth per node (KB)",
+    "coverage_rate_mean": "Coverage rate",
 }
 
 def fmt_seconds(val):
@@ -54,8 +54,8 @@ def plot_heatmaps(csv_path: str, metric: str, shared_scale: bool, output: str):
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 9))
     fig.suptitle(
-        f"Stratēģiju salīdzinājums — {METRIC_LABELS.get(metric, metric)}\n"
-        f"X: vidējais tiešsaistes ilgums   |   Y: vidējais bezsaistes ilgums",
+        f"Strategy comparison — {METRIC_LABELS.get(metric, metric)}\n"
+        f"X: mean online duration   |   Y: mean offline duration",
         fontsize=13, y=1.01
     )
 
@@ -92,8 +92,8 @@ def plot_heatmaps(csv_path: str, metric: str, shared_scale: bool, output: str):
             cbar_kws={"shrink": 0.8, "label": METRIC_LABELS.get(metric, metric)},
         )
         ax.set_title(strategy, fontsize=12, fontweight="bold")
-        ax.set_xlabel("Tiešsaistes ilgums", fontsize=10)
-        ax.set_ylabel("Bezsaistes ilgums", fontsize=10)
+        ax.set_xlabel("Online duration", fontsize=10)
+        ax.set_ylabel("Offline duration", fontsize=10)
         ax.tick_params(labelsize=9)
 
     plt.tight_layout()

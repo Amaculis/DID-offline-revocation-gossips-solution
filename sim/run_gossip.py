@@ -32,7 +32,7 @@ def run(
         rng=random.Random(rng.randint(0, 2**31)),
     )
 
-    graph = build_graph(network_size, seed=seed) #Aizvietots ar network_size, lai balansētu holder-gossip
+    graph = build_graph(network_size, seed=seed)
     dead = assign_dead_nodes(network_size, dead_ratio, rng)
     online_states = assign_initial_states(network_size, offline_ratio, rng, dead_nodes=dead)
 
@@ -53,7 +53,7 @@ def run(
         )
         nodes.append(node)
 
-    # Peer to peer mezglus apmaiņas saskaņā ar grafu topoloģiju
+    # Wire peer-to-peer gossip links according to the graph topology
     for node_id, node in enumerate(nodes):
         node.peers = [nodes[nbr] for nbr in graph.neighbors(node_id)]
 

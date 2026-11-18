@@ -1,228 +1,272 @@
 # DID Offline Revocation — Gossip Simulation
 
-## Arhitektūra
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![SimPy](https://img.shields.io/badge/simulation-SimPy-informational)
+![Scale](https://img.shields.io/badge/scale-up%20to%201M%20nodes-success)
 
-### Projekta struktūra
+A discrete-event simulator that compares **how credential-revocation information reaches verifiers that are often offline**: classic PULL and PUSH against peer-to-peer gossip and a hybrid that also lets credential holders carry fresh revocation lists between verifiers.
 
-```text
-sim/
-├── common/
-│   ├── models.py          # Datu klases: StatusList, RevocationEvent, VerificationAttempt, NodeStats
-│   ├── issuer.py          # Issuer — ģenerē revokācijas, apkalpo PUSH abonentus
-│   ├── metrics.py         # summarize(), propagation_delay(), false_acceptance_rate(), bandwidth_per_node()
-│   └── network.py         # build_graph(), assign_initial_states(), assign_dead_nodes()
-├── strategies/
-│   ├── pull.py            # PullNode — periodiski fetch no Issuer (TTL-balstīts)
-│   ├── push.py            # PushNode — saņem push no Issuer pie reconnect
-│   ├── gossip.py          # GossipNode — P2P gossip starp verifikatoriem
-│   ├── holder_gossip.py   # HolderGossipNode + HolderNode — gossip + holder prezentācijas
-│   ├── push_holder_gossip.py  # PushHolderGossipNode — PUSH + P2P gossip + holder
-│   └── verification_gossip.py # VerificationGossipNode — verifikācijas gossip (eksperimentāls)
-├── run_pull.py            # Runner: PULL stratēģija
-├── run_push.py            # Runner: PUSH stratēģija
-├── run_gossip.py          # Runner: tīrs P2P gossip
-├── run_holder_gossip.py   # Runner: GOSSIP + holder prezentācijas
-├── run_push_holder_gossip.py  # Runner: MIXED (PUSH + GOSSIP + holder)
-└── run_verification_gossip.py # Runner: verifikācijas gossip
-experiments/
-├── run_sweep.py           # 1D/2D parametru slaucījumi ar multiprocessing
-├── run_scaling.py         # Tīkla izmēru skalēšanas testi (līdz 1M mezgliem)
-├── run_averaged.py        # Ātrs N-seed vidējo rādītāju tests
-├── plot_results.py        # Vizualizācija no CSV failiem
-└── results/               # CSV un PNG izejas faili
+**Core question:** when many verifiers have no (or only intermittent) connection to the issuer, how long do they stay blind to a revocation, and how often do they wrongly accept a revoked credential (*false acceptance rate*, FAR)?
+
+![Heatmap: FAR by strategy](docs/img/heatmap_far.png)
+
+## Contents
+
+- [Strategies](#strategies)
+- [Quick start](#quick-start)
+- [Key results](#key-results)
+- [How the simulation works](#how-the-simulation-works)
+- [Metrics](#metrics)
+- [Parameters](#parameters)
+- [Experiments](#experiments)
+- [Project structure](#project-structure)
+
+## Strategies
+
+| Strategy | How a verifier learns about revocations | Needs issuer access? |
+| --- | --- | --- |
+| **PULL** | Periodically fetches the status list from the issuer when online and the cached list has expired (TTL). | Yes, every node |
+| **PUSH** | Issuer pushes each new list to every node that is online (and also on reconnect). | Yes, every node |
+| **GOSSIP** | Only a few *seed* nodes talk to the issuer; everyone else gets lists from random peers, and holders carry lists between verifiers. | Only seeds |
+| **MIXED** | PUSH + P2P gossip + holder presentations combined. | Seeds + online nodes |
+
+```mermaid
+flowchart LR
+    I[(Issuer)]
+    subgraph PULL
+        direction LR
+        V1[Verifier] -- "fetch when TTL expired" --> I
+    end
+    subgraph PUSH
+        direction LR
+        I -- "push on revocation / reconnect" --> V2[Verifier]
+    end
+    subgraph GOSSIP / MIXED
+        direction LR
+        I -. "seed nodes only" .-> S[Seed verifier]
+        S <-- "gossip" --> P1[Verifier]
+        P1 <-- "gossip" --> P2[Verifier]
+        H((Holder)) <-- "presents credential + list" --> P2
+        H <-- "presents credential + list" --> P1
+    end
 ```
 
-### Simulācijas mehānisms
-
-Simulācija izmanto **SimPy** — diskrētā laika notikumu simulācijas bibliotēku. Katrs mezgls ir neatkarīgs SimPy process.
-
-```text
-Issuer
-  │  revokācija (Poisson process, rate = revocation_rate)
-  │  → StatusList (versija, revoked_ids, issued_at, ttl)
-  │
-  ├── PULL:  mezgli periodiski fetch (ik CHECK_INTERVAL=300s, ja online un saraksts beidzies)
-  ├── PUSH:  Issuer push pie revokācijas → tikai online + nav dead mezgļi
-  └── GOSSIP: seed mezgli fetch → izplata P2P (eksponenciāls kontaktu ātrums, contact_rate)
-```
-
-### Mezgla stāvokļi
-
-Katram mezglam ir divi neatkarīgi bināri atribūti:
-
-| Atribūts | Vērtības | Nozīme |
-| --- | --- | --- |
-| `is_online` | True/False | Savienojums ar Issuer. Pārslēdzas eksponenciāli (mean_online / mean_offline) |
-| `is_dead` | True/False | Nav Issuer piekļuves **nekad** — tikai P2P gossip. Pastāvīgs visas simulācijas laikā |
-
-`is_online` ietekmē tikai Issuer saziņu (PULL fetch, PUSH saņemšana). P2P gossip notiek neatkarīgi no `is_online`.
-
-### Sēklas mezgli (seed nodes)
-
-GOSSIP un MIXED stratēģijās `seed_ratio` (noklusēti 1%) mezglu ir tieša Issuer piekļuve. Tikai šie mezgli periodiski fetch jauno StatusList un tad izplata to pārējiem caur gossip. Tas modelē reālo scenāriju, kur lielākā daļa mezglu nav tieši savienoti ar Issuer.
-
-### Holder prezentācijas (GOSSIP, MIXED)
-
-HolderNode periodiski (mean_presentation_interval) piesakās pie nejaušu verifikātoru (~6 kaimiņi). Notikumā:
-
-1. Ja holder versija > verifikatora versija un saraksts vēl nav beidzies → holder pārsūta savu sarakstu verifikatoram
-2. Ja verifikatora versija > holder versija → verifikators pārsūta savu sarakstu holderim
-3. Verifikators reģistrē verifikācijas mēģinājumu (`is_presentation=True`)
-
-### Galvenie mērījumi
-
-| Metrika | Apraksts |
-| --- | --- |
-| `false_acceptance_rate` (FAR) | Daļa no verifikācijām, kur mezgls nepareizi pieņēma atceltus akreditācijas datus |
-| `propagation_delay_mean_s` | Vidējais laiks no revokācijas līdz 95% mezglu informētībai (izslēdzot dead mezglus) |
-| `bandwidth_per_node_kb` | Vidējais pārsūtīto baitu skaits uz mezglu (tikai saņēmēja puse) |
-| `coverage_rate` | Daļa revokāciju, kas sasniedza 95% pārklājumu simulācijas laikā |
-
-### Parametri
-
-| Parametrs | Noklusējums | Apraksts |
-| --- | --- | --- |
-| `network_size` | 500 | Verifikatoru skaits |
-| `dead_ratio` | 0.1 | Daļa mezglu bez Issuer piekļuves |
-| `offline_ratio` | 0.2 | Sākotnējā daļa offline mezglu (arī nosaka steady-state) |
-| `ttl` | 28800 | StatusList derīguma laiks (sekundēs) |
-| `revocation_rate` | 0.001 | Revokāciju biežums (notikumi/s) |
-| `mean_online_duration` | 3600 | Vidējais online periods (s) |
-| `mean_offline_duration` | 14400 | Vidējais offline periods (s) |
-| `contact_rate` | 1/600 | Gossip kontaktu biežums uz mezglu (kontakti/s) |
-| `seed_ratio` | 0.01 | Daļa mezglu ar tiešu Issuer piekļuvi (GOSSIP/MIXED) |
-
----
-
-## Noklusētās simulācijas
-
-Vienu reizi palaiž visas aktīvās stratēģijas un izdrukā salīdzināšanas tabulu.
+## Quick start
 
 ```bash
+pip install -r requirements.txt
+
+# Compare all strategies once and print a table
 python main.py
 ```
 
-Jālabo `PARAMS` iekš [main.py](main.py) lai mainītu tīkla lielumu, TTL, dead_ratio utt.
+Edit `PARAMS` in [main.py](main.py) to change network size, TTL, dead ratio, etc. Several ready-made real-world scenarios (smart city, factory, expedition, …) are defined there too.
 
-!!! NAV IETEICAMS laist ļoti lielus tīkla izmērus, ja ir velme iepazīties ar sistēmas darbību. 500 mezgli izgriežas par aptuveni 30 sekundēm katrais stratēģijai, bet, piemēram, 5000, mezgli būs jāgaida jau 20 min katrai. To var samazinot ar daudzpavedienu izpildi, bet par to tālāk. 
+> **Tip:** start small. 500 nodes take roughly 30 s per strategy; 5 000 nodes take about 20 min per strategy. Use the multiprocessing sweeps below for larger studies.
 
----
+## Key results
 
-## Vairāku seed simulācijas
+Strategy comparison while increasing the share of **dead** nodes (nodes that never reach the issuer):
 
-Katru stratēģiju palaiž N reizes ar dažādiem sākotnējiem rādītājiem un aprēķina visu rādītāju vidējo vērtību.
-Noderīgi ātrai saprāta pārbaudei pirms pilnas pārbaudes.
+![Sweep over dead_ratio](docs/img/sweep_dead_ratio.png)
+
+- **PULL** FAR grows roughly linearly with `dead_ratio` (fit ≈ 1.12 · dead_ratio): a node that cannot reach the issuer never learns anything.
+- **GOSSIP** stays low until about 65 % dead nodes, then collapses because the gossip graph is no longer connected to a seed.
+- **MIXED** keeps FAR close to zero almost everywhere and has by far the lowest propagation delay, **at the cost of the highest bandwidth** (≈ 800 KB per node in this setup).
+
+How online/offline durations affect FAR (average online time on X, average offline time on Y):
+
+![Heatmap: delay](docs/img/heatmap_delay.png)
+
+Scaling with network size (contact rate normalised):
+
+![Scaling](docs/img/scaling_network_size.png)
+
+More plots (TTL and offline-ratio sweeps) are in [docs/img/](docs/img/); raw CSVs are in [experiments/results/](experiments/results/).
+
+## How the simulation works
+
+The simulator is built on [SimPy](https://simpy.readthedocs.io/) (discrete-event simulation). Every node is an independent SimPy process.
+
+```mermaid
+sequenceDiagram
+    participant I as Issuer
+    participant S as Seed verifier
+    participant V as Verifier
+    participant H as Holder
+
+    Note over I: revocation ~ Poisson(revocation_rate)
+    I->>I: publish StatusList (version, revoked_ids, ttl)
+    I-->>S: fetch / push (if online)
+    loop every ~1/contact_rate
+        S->>V: gossip: newer version wins
+    end
+    loop every ~mean_presentation_interval
+        H->>V: present credential
+        V-->>H: send list if verifier is newer
+        H-->>V: send list if holder is newer and still fresh
+        V->>V: log verification (was it revoked? did we know?)
+    end
+```
+
+### Node states
+
+Every node has two independent binary attributes:
+
+| Attribute | Meaning |
+| --- | --- |
+| `is_online` | Connection to the issuer. Toggles with exponentially distributed durations (`mean_online_duration` / `mean_offline_duration`). |
+| `is_dead` | The node has **no** issuer access, ever; it can only learn through P2P gossip. Fixed for the whole simulation. |
+
+`is_online` only affects communication with the issuer (PULL fetch, PUSH delivery). P2P gossip happens independently of it.
+
+### Seed nodes
+
+In GOSSIP and MIXED, a fraction `seed_ratio` (default 1 %) of nodes have direct issuer access. Only they fetch new status lists and then spread them via gossip, modelling the realistic case where most verifiers are not connected to the issuer.
+
+### Holder presentations (GOSSIP, MIXED)
+
+A holder periodically (`mean_presentation_interval`) presents its credential to a random verifier (~6 neighbours). On each presentation:
+
+1. If the holder's list is newer than the verifier's and not yet expired, the holder hands its list to the verifier.
+2. If the verifier's list is newer, the verifier hands it to the holder.
+3. The verifier logs a verification attempt (`is_presentation=True`).
+
+## Metrics
+
+| Metric | Description |
+| --- | --- |
+| `false_acceptance_rate` (FAR) | Share of verifications in which a node wrongly accepted a revoked credential. |
+| `propagation_delay_mean_s` | Mean time from a revocation until nodes learn about it (dead nodes excluded). |
+| `propagation_delay_p95_s` | Time within which 95 % of nodes have learned about a revocation. |
+| `coverage_rate` | Share of revocations that reached 95 % of nodes during the simulation. |
+| `bandwidth_per_node_kb` | Mean bytes transferred per node (receiver side only). |
+| `storage` | Per-node storage of the status list (mean / max). |
+| `list_age` | Age of the cached list at verification time. |
+
+## Parameters
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `network_size` | 500 | Number of verifiers |
+| `dead_ratio` | 0.1 | Share of nodes without issuer access |
+| `offline_ratio` | 0.2 | Initial share of offline nodes (also sets the steady state) |
+| `ttl` | 28800 | StatusList validity (seconds) |
+| `revocation_rate` | 0.001 | Revocations per second |
+| `mean_online_duration` | 3600 | Mean online period (s) |
+| `mean_offline_duration` | 14400 | Mean offline period (s) |
+| `contact_rate` | 1/600 | Gossip contacts per node per second |
+| `seed_ratio` | 0.01 | Share of nodes with direct issuer access (GOSSIP/MIXED) |
+
+## Experiments
+
+### Averaged runs
+
+Runs each strategy N times with different seeds and averages the results. Handy as a quick sanity check.
 
 ```bash
-# Noklusēti: 5 seeds
-python experiments/run_averaged.py
-
-# Custom seed skaits
+python experiments/run_averaged.py            # 5 seeds (default)
 python experiments/run_averaged.py --runs 20
 ```
 
----
+### Parameter sweeps
 
-## Parameterizēts tests
-
-Izslauka katru parametra dimensiju atsevišķi, saglabā CSV failus mapē `experiments/results/`.
+Sweeps each parameter independently and writes CSVs to `experiments/results/`.
 
 ```bash
-# Pilns slaucījums, 10 seed katrā punktā, vienmērīgs (bez adaptīvas)
+# Full sweep, 10 seeds per point, uniform (non-adaptive)
 python experiments/run_sweep.py --runs 10 --no-adaptive --workers 8
 
-# Izvēles dimensijas
+# Selected dimensions only
 python experiments/run_sweep.py --runs 10 --no-adaptive --dims dead_ratio offline_ratio ttl
 
-# Divu parametru atbilstība (ttl x dead ration)
+# Two-parameter sweep (ttl x dead_ratio)
 python experiments/run_sweep.py --runs 10 --no-adaptive --2d --workers 8
 
-# LV adaptīvs režīms, automātiski pievieno sēklas augstas dispersijas punktiem (VK > 1,0 → līdz 15 sēklām)
+# Adaptive mode: add seeds at high-variance points (CV > 1.0 -> up to 15 seeds)
 python experiments/run_sweep.py --runs 5 --max-runs 15 --cv-threshold 1.0 --workers 8
 ```
-
-**Galvenās atslēgas pie palaišanas:**
 
 | Flag | Default | Description |
 | --- | --- | --- |
 | `--runs N` | 5 | Seeds per sweep point |
 | `--max-runs N` | 15 | Max seeds for high-CV points (adaptive mode) |
-| `--cv-threshold F` | 1.0 | CV above which extra seeds are added |
-| `--no-adaptive` | off | Disable adaptive seeds — uniform n_runs everywhere |
+| `--cv-threshold F` | 1.0 | Coefficient of variation above which extra seeds are added |
+| `--no-adaptive` | off | Use exactly `--runs` seeds everywhere |
 | `--workers N` | cpu_count | Parallel workers |
-| `--dims` | all | Space-separated list of dimensions to sweep |
-| `--2d` | off | Also run 2D sweep (TTL × dead_ratio) |
+| `--dims` | all | Dimensions to sweep (space-separated) |
+| `--2d` | off | Also run the 2D sweep (TTL × dead_ratio) |
 
-**Pieejamās dimensijas:** `dead_ratio`, `offline_ratio`, `revocation_rate`, `ttl`, `network_size`, `mean_offline_duration`, `mean_online_duration`
+**Available dimensions:** `dead_ratio`, `offline_ratio`, `revocation_rate`, `ttl`, `network_size`, `mean_offline_duration`, `mean_online_duration`
 
-**Piezīmes:**
+Notes:
 
-- `offline_ratio` Automatiski pielāgo `mean_offline_duration`  lai nodrošinātu izvelēto atbilstību : `mean_offline = mean_online × ratio / (1 − ratio)`
-- `network_size` automatiski normalizē `contact_rate`  lai būtu realistiski dati par mijiedarbības biežumu
+- `offline_ratio` automatically adjusts `mean_offline_duration`: `mean_offline = mean_online × ratio / (1 − ratio)`.
+- `network_size` automatically normalises `contact_rate` so the per-node meeting frequency stays realistic.
 
----
+### Scaling tests
 
-## Tīkla izmēru eksperemennti 
-
-Testē izplatīšanās aizkavi un FAR tīklos līdz pat 1 000 000 mezgliem.
-Izmanto 1 dienas sim_duration un normalizētu contact_rate, lai noteiktu iespējamos izpildes laikus.
+Measures propagation delay and FAR for networks up to 1 000 000 nodes, using a 1-day `sim_duration` and normalised `contact_rate` to keep run times manageable.
 
 ```bash
-# Līdz 100 000 mezgliem (dažas min)
-python experiments/run_scaling.py --max-n 100000 --runs 3 --workers 8
-
-# Pilna līdz 1 000 000 mezgli (20–40 min )
-python experiments/run_scaling.py --runs 3 --workers 8
-
-# Custom
+python experiments/run_scaling.py --max-n 100000 --runs 3 --workers 8   # a few minutes
+python experiments/run_scaling.py --runs 3 --workers 8                  # up to 1M nodes, 20-40 min
 python experiments/run_scaling.py --max-n 10000 --runs 5 --workers 4
 ```
 
-Saglabā `experiments/results/scaling_network_size.csv` un `scaling_network_size.png`.
+Outputs `experiments/results/scaling_network_size.csv` and `.png`.
 
----
-
-## Vizualizēt rezultātus
-
-Ģenerē PNG diagrammas no visiem esošajiem CSV failiem `experiments/results/`.
+### Plotting
 
 ```bash
+# PNGs from every CSV in experiments/results/ (95% CI bands, NaN annotations, PULL linear fit)
 python experiments/plot_results.py
+
+# 2D heatmaps
+python experiments/plot_heatmap_2d.py                                   # FAR (default)
+python experiments/plot_heatmap_2d.py --metric delay_mean_mean          # propagation delay
+python experiments/plot_heatmap_2d.py --metric bandwidth_per_node_kb_mean
+python experiments/plot_heatmap_2d.py --metric far_mean --shared-scale  # same color scale for all 4
+python experiments/plot_heatmap_2d.py --csv my_data.csv --output out.png
 ```
 
-Izveido PNG failus pa dimensijām ar 95 % ticamības intervāla (CI) joslām, NaN anotācijām un lineāru pielāgojumu PULL FAR un dead_ratio vērtībām. Ja pastāv 2D slaucīšanas CSV fails, ģenerē arī
-`sweep2d_far.png` un `sweep2d_delay.png` .
+### Output files
 
----
+All saved under `experiments/results/`:
 
-## Izejas faili
-
-Visu pieglabā iekš `experiments/results/`:
-
-| Fails | Apraksts |
+| File | Description |
 | --- | --- |
-| `sweep_{dim}.csv` | 1D tstu rezultāti ar vidējo vērtību, standartu, CI95 katram rādītājam |
-| `sweep_{dim}.png` | Diagrammas ar 95% CI joslām |
-| `sweep2d_ttl_x_dead_ratio.csv` | 2D testu rezultāti |
-| `sweep2d_far.png` | FAR testi |
-| `sweep2d_delay.png` | Aizkaves testi |
-| `scaling_network_size.csv` | Tīkla izmēru testi |
-| `scaling_network_size.png` | Testi prret o(log n) līkni |
+| `sweep_{dim}.csv` | 1D sweep results: mean, std and 95 % CI for every metric |
+| `sweep_{dim}.png` | Plots with 95 % CI bands |
+| `sweep2d_*.csv` | 2D sweep results |
+| `sweep2d_*_far.png`, `sweep2d_*_delay.png` | FAR and delay heatmaps |
+| `scaling_network_size.csv` / `.png` | Network-size scaling results |
 
+## Project structure
 
-## 2D testu labota vizualizācija 
-
-# FAR noklusēti
-python plot_heatmap_2d.py
-
-# Aizkave
-python plot_heatmap_2d.py --metric delay_mean_mean
-
-# Joslas platums
-python plot_heatmap_2d.py --metric bandwidth_per_node_kb_mean
-
-# Vienota vvizualizācija 4 stratēģijām
-python plot_heatmap_2d.py --metric far_mean --shared-scale
-
-# Var mainīt faila nosaukumu, lai nepārrakstīt
-python plot_heatmap_2d.py --csv mani_dati.csv --output rezultats.png
+```text
+main.py                      # run all strategies once and print a comparison table
+sim/
+├── common/
+│   ├── models.py            # StatusList, RevocationEvent, VerificationAttempt, NodeStats
+│   ├── issuer.py            # Issuer: generates revocations, serves PUSH subscribers
+│   ├── metrics.py           # summarize(), propagation_delay(), false_acceptance_rate(), ...
+│   └── network.py           # build_graph(), assign_initial_states(), assign_dead_nodes()
+├── strategies/
+│   ├── pull.py              # PullNode: periodic TTL-based fetch
+│   ├── push.py              # PushNode: receives pushes from the issuer
+│   ├── gossip.py            # GossipNode: P2P gossip between verifiers
+│   ├── holder_gossip.py     # HolderGossipNode + HolderNode: gossip + holder presentations
+│   ├── push_holder_gossip.py        # MIXED: PUSH + gossip + holder
+│   └── verification_gossip.py       # experimental verification gossip
+└── run_*.py                 # one runner per strategy
+experiments/
+├── run_sweep.py             # 1D/2D parameter sweeps (multiprocessing)
+├── run_scaling.py           # network-size scaling (up to 1M nodes)
+├── run_averaged.py          # quick N-seed averaged run
+├── plot_results.py          # plots from CSV files
+├── plot_heatmap_2d.py       # 2D heatmaps
+└── results/                 # CSV / PNG outputs
+docs/img/                    # figures used in this README
+graphs/                      # design diagrams (Mermaid / draw.io)
+```

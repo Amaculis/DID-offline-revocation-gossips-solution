@@ -33,12 +33,12 @@ class PushNode:
         env.process(self._connectivity_process())
         env.process(self._verify_process())
 
-        # Ja sākotnēji ir tiešsaistē, saņem uzreiz push (tikai ja nav dead)
+        # If initially online, receive a push immediately (unless dead)
         if is_online and not is_dead:
             issuer.notify_online(self)
 
-    # Nejauši pārliek online vai offline ar noteiktu vidējo laiku starp pārslēgumiem. Kad parādās online, tas tiek informēts par jaunāko StatusList, lai varētu salīdzināt versijas un izlemt, vai pieņemt jauno sarakstu.
-    
+    # Randomly toggles online/offline with the given mean time between switches.
+    # On coming online, the node is sent the latest StatusList so it can compare versions.
     def _connectivity_process(self):
         while True:
             if self.is_online:
@@ -50,17 +50,15 @@ class PushNode:
                 yield self.env.timeout(duration)
                 self.is_online = True
 
-                # Node tikko parādījās online — izdevējs tūlītēji push (tikai ja nav dead)
+                # Node just came online: the issuer pushes immediately (unless dead)
                 if not self.is_dead:
                     self.issuer.notify_online(self)
 
-    # Saņem push no izdevēja
-    
+    # Receive a push from the issuer
     def receive_push(self, status_list: StatusList) -> None:
-        
         current_version = self.cached_list.version if self.cached_list is not None else -1
         if status_list.version <= current_version:
-            return  # ja mazāks vai vienāds, tad nevajag atjaunināt
+            return  # older or equal: nothing to update
 
         prev_revoked = (
             set(self.cached_list.revoked_ids) if self.cached_list is not None else set()
@@ -72,20 +70,19 @@ class PushNode:
         self.stats.fetch_count += 1
         self.stats.max_list_bytes = max(self.stats.max_list_bytes, bytes_rx)
 
-        # Ja saraksts ir jaunāks, tad pārbauda, kuras revokācijas ir jaunas (nav prev_revoked), un ieraksta awareness_times[cred_id] = sim_time.
+        # The list is newer: record awareness_times[cred_id] = sim_time for every newly revoked credential.
         newly_known = set(status_list.revoked_ids) - prev_revoked
         for cid in newly_known:
             if cid not in self.awareness_times:
                 self.awareness_times[cid] = self.env.now
 
-    # Periodiski pārbauda akreditācijas statusu, lai izmērītu false acceptance rate. Šī daļa ir identiska PullNode, jo mēs vēlamies salīdzināt tikai izplatīšanās mehānismu, nevis verifikācijas loģiku.
+    # Periodically verifies a credential to measure the false acceptance rate.
+    # Identical to PullNode: only the distribution mechanism is being compared, not the verification logic.
     def _verify_process(self):
         mean_verify_interval = 3600
         while True:
             delay = self.rng.expovariate(1 / mean_verify_interval)
             yield self.env.timeout(delay)
-            #if self.is_online:
-            #    self._do_verify()
             self._do_verify()
 
     def _do_verify(self):

@@ -8,7 +8,7 @@ from sim.run_verification_gossip import run as run_verification_gossip
 PARAMS = dict(
     network_size=500,
     offline_ratio=0.2,
-    dead_ratio=0.9, #tie kas jau nekad nebūs online. 
+    dead_ratio=0.9, # nodes that will never come online (no issuer access)
     ttl=28800,#3600,
     revocation_rate=0.1,
     sim_duration=86400 * 7,
@@ -20,7 +20,7 @@ PARAMS = dict(
 PARAMS_for_pull = dict(
     network_size=500,
     offline_ratio=0.5,
-    dead_ratio=0.00, #tie kas jau nekad nebūs online. 
+    dead_ratio=0.00, # nodes that will never come online (no issuer access)
     ttl=3600,#3600,
     revocation_rate=0.001,
     sim_duration=86400 * 7,
@@ -32,7 +32,7 @@ PARAMS_for_pull = dict(
 PARAMS_for_push = dict(
     network_size=500,
     offline_ratio=0.4,
-    dead_ratio=0.06, #tie kas jau nekad nebūs online. 
+    dead_ratio=0.06, # nodes that will never come online (no issuer access)
     ttl=86400,#3600,
     revocation_rate=0.001,
     sim_duration=86400 * 7,
@@ -44,17 +44,17 @@ PARAMS_for_push = dict(
 PARAMS_IoT = dict(
     network_size=500,
     offline_ratio=0.5,
-    dead_ratio=0.7,       # liel bez interneta
-    ttl=604800,           # TTL = 1 nedēļa
+    dead_ratio=0.7,       # most nodes have no internet
+    ttl=604800,           # TTL = 1 week
     revocation_rate=0.0001,
     mean_online_duration=600,    # 10 minutes online
-    mean_offline_duration=86400, # 1 dienu offline
+    mean_offline_duration=86400, # 1 day offline
 )
 
 PARAMS_unstable_network = dict(
     network_size=500,
     offline_ratio=0.3,
-    dead_ratio=0.5,       # puse bez Issuer-dostupa
+    dead_ratio=0.5,       # half have no issuer access
     ttl=28800,
     revocation_rate=0.001,
     mean_online_duration=3600,
@@ -63,19 +63,19 @@ PARAMS_unstable_network = dict(
 
 PARAMS_wallets = dict(
     network_size=500,
-    offline_ratio=0.4,    # daudz offline
-    dead_ratio=0.6,       # lielākā daļa maku bez Issuer
+    offline_ratio=0.4,    # many offline
+    dead_ratio=0.6,       # most wallets have no issuer access
     ttl=86400,
     revocation_rate=0.001,
     mean_online_duration=1800,   # 30 minutes online
     mean_offline_duration=21600, # 6 hours offline
 )
 
-#--------------Darba testi----------------
+#-------------- Real-world scenarios ----------------
 PARAMS_Smartcity = dict(
     network_size=1000,
-    offline_ratio=0.1,    # daudz offline
-    dead_ratio=0.05,       # lielākā daļa maku bez Issuer
+    offline_ratio=0.1,    # many offline
+    dead_ratio=0.05,       # most wallets have no issuer access
     ttl=3600,
     revocation_rate=0.01,
     mean_online_duration=14400,   # 4 hours online
@@ -89,7 +89,7 @@ PARAMS_countyside = dict(
     ttl=86400,
     revocation_rate=0.001,
     mean_online_duration=3600,   # 1 hour online
-    mean_offline_duration=1800, # 1 hour offline
+    mean_offline_duration=1800, # 30 minutes offline
 )
 
 PARAMS_critical = dict(
@@ -149,7 +149,7 @@ PARAMS_test = dict(
     ttl=86400,
     revocation_rate=0.001,
     mean_online_duration=3600,   # 1 hour online
-    mean_offline_duration=1800, # 1 hour offline
+    mean_offline_duration=1800, # 30 minutes offline
 )
 
 PARAMS = PARAMS_test 
@@ -176,31 +176,28 @@ def _print_comparison(results: list[dict]):
     print("=" * len(header))
 
     rows = [
-        ("Propagation delay p95 (s)",   lambda r: _fmt(r["propagation_delay_p95_s"])), #95 % procenti no mezgliem uzzin par jauniem datiem šī laika ietvaros. Sekundes
-        ("Propagation delay mean (s)",   lambda r: _fmt(r["propagation_delay_mean_s"])), # Vidējā aizture sekundēs , līdz brīdim, kad mezgls uzzina par izmaiņu sekundēs. Vidējais "aklums"
-        ("Holder propagation delay mean (s)",   lambda r: _fmt(r["holder_propagation_delay_mean_s"])), # Vidējā aizture sekundēs holder mezgliem
-        ("Revocations @ 95% coverage",  lambda r: f"{r['revocations_reached_95pct']}/{r['total_revocations']}"), # Cik mezgli uzzināja par revokācijām, kad 95% revokāciju bija izplatītas. Cik revokāciju sasniedza 95% mezglu.
-        ("False acceptance rate",        lambda r: f"{r['false_acceptance_rate']:.2%}"), # Cik procentu no revokācijas bija apstiprināti nekorekti. 
-        ("Total verifications",          lambda r: str(r["total_verifications"])), # Kopējo verifikāciju skaits
-        ("Bandwidth/node mean (KB)",     lambda r: f"{r['bandwidth']['mean']/1024:.1f}"), #Cik KB vidējs katrs mezgls lejuplādēja simulācijas laikā. 
-        ("Bandwidth/node p95 (KB)",      lambda r: f"{r['bandwidth']['p95']/1024:.1f}"), # Cik KB 95% mezglu lejuplādēja simulācijas laikā.
-        ("Bandwidth total (MB)",         lambda r: f"{r['bandwidth']['total']/1024**2:.1f}"), #Kopējais traffiks
-        ("Storage/node mean (KB)",       lambda r: f"{r['storage']['mean']/1024:.1f}"), # Vidējais katra mezgla uzglabāšanas apjoms KB
-        ("Storage/node max (KB)",        lambda r: f"{r['storage']['max']/1024:.1f}"), # Maksimālais katra mezgla uzglabāšanas apjoms KB
+        ("Propagation delay p95 (s)",   lambda r: _fmt(r["propagation_delay_p95_s"])), # 95% of nodes learn about new data within this time
+        ("Propagation delay mean (s)",   lambda r: _fmt(r["propagation_delay_mean_s"])), # mean delay until a node learns about a change (mean "blind window")
+        ("Holder propagation delay mean (s)",   lambda r: _fmt(r["holder_propagation_delay_mean_s"])), # same, for holder nodes
+        ("Revocations @ 95% coverage",  lambda r: f"{r['revocations_reached_95pct']}/{r['total_revocations']}"), # revocations that reached 95% of nodes / total revocations
+        ("False acceptance rate",        lambda r: f"{r['false_acceptance_rate']:.2%}"), # share of verifications that wrongly accepted a revoked credential
+        ("Total verifications",          lambda r: str(r["total_verifications"])), # total number of verifications
+        ("Bandwidth/node mean (KB)",     lambda r: f"{r['bandwidth']['mean']/1024:.1f}"), # mean KB downloaded per node during the simulation
+        ("Bandwidth/node p95 (KB)",      lambda r: f"{r['bandwidth']['p95']/1024:.1f}"), # 95th percentile of KB downloaded per node
+        ("Bandwidth total (MB)",         lambda r: f"{r['bandwidth']['total']/1024**2:.1f}"), # total traffic
+        ("Storage/node mean (KB)",       lambda r: f"{r['storage']['mean']/1024:.1f}"), # mean per-node storage (KB)
+        ("Storage/node max (KB)",        lambda r: f"{r['storage']['max']/1024:.1f}"), # max per-node storage (KB)
         ("Expired-TTL verifications",    lambda r: f"{r['expired_ttl_verifications']['rate']:.2%} ({r['expired_ttl_verifications']['count']}/{r['expired_ttl_verifications']['total']})"),
-        ("List age at verify mean (s)",  lambda r: _fmt(r["list_age"]["mean"])),  # Cik sena vidēji bija kešatmiņa verifikācijas brīdī
-        ("List age at verify min (s)",   lambda r: _fmt(r["list_age"]["min"])),   # Jaunākā kešatmiņa, ko mezgls izmantoja
-        ("List age at verify max (s)",   lambda r: _fmt(r["list_age"]["max"])),   # Vecākā kešatmiņa, ko mezgls izmantoja
-        ("Presentation verifications",   lambda r: str(r["presentation_count"])),  # Verifikācijas, kas notika prezentācijas laikā (tikai HOLDER-GOSSIP)
-        ("Presentation FAR",             lambda r: f"{r['presentation_false_acceptance_rate']:.2%}"),  # Prezentācijas verifikāciju kļūdu līmenis
+        ("List age at verify mean (s)",  lambda r: _fmt(r["list_age"]["mean"])),  # mean age of the cached list at verification time
+        ("List age at verify min (s)",   lambda r: _fmt(r["list_age"]["min"])),   # freshest cache used
+        ("List age at verify max (s)",   lambda r: _fmt(r["list_age"]["max"])),   # oldest cache used
+        ("Presentation verifications",   lambda r: str(r["presentation_count"])),  # verifications triggered by a holder presentation (HOLDER-GOSSIP only)
+        ("Presentation FAR",             lambda r: f"{r['presentation_false_acceptance_rate']:.2%}"),  # FAR of presentation verifications
     ]
 
 
-    #TODO 
-    # pievienot Pieejamības metriku, kas skaitās veiksmīgas verifikācijas/kopējais verifikāciju skaits, lai redzētu, vai kāda stratēģija ir jutīgāka pret offline mezgliem un vai tas ietekmē lietotāju pieredzi.
-    # Verifikācijas ilgumu
-    # Pie mixed stratēgijas pievienot vēl metriku "Obligāto tīkla verifikāciju", kas norādīs cik % verifikāciju bija jāveic tiešsaistē, lai redzētu, vai tas varētu būt labs kompromiss starp izplatīšanās ātrumu un tīkla slodzi.
-
+    # TODO
+    # - Availability metric: successful verifications / total verifications, to see whether a strategy    #   is more sensitive to offline nodes and how that affects user experience.    # - Verification duration.    # - For MIXED: share of verifications that had to go online (trade-off: propagation speed vs. network load).
 
     for label, fn in rows:
         print(f"{label:<36}" + "".join(f"{fn(r):>16}" for r in results))

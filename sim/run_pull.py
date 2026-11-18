@@ -48,7 +48,7 @@ def run(
         )
         nodes.append(node)
 
-    # patch node lai izsekotu, kad katrs mezgls pirmo reizi uzzina par katru revokāciju, lai varētu aprēķināt izplatīšanās aizkavi.
+    # Patch nodes to track when each node first learns of each revocation (needed for propagation delay).
     _patch_awareness_tracking(nodes, issuer)
 
     env.run(until=sim_duration)

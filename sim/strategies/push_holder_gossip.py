@@ -40,10 +40,10 @@ class PushHolderGossipNode:
         self.peers: list[PushHolderGossipNode] = []
         self.holders: list[PushHolderNode] = []
 
-        # Šis fetch tiek veikts bez apmaksas, jo tas ir nepieciešams, lai nodrošinātu, ka vismaz viens mezgls sāk ar jaunāko sarakstu, un tāpēc var izplatīt to pārējiem caur gossip.
+        # Not counted as a normal fetch: guarantees at least one node starts with the latest list.
         self._initial_fetch()
 
-        # Ja sākotnēji ir tiešsaistē un ir seed, saņem uzreiz push
+        # If initially online and a seed, receive a push immediately
         if is_online and not is_dead and is_seed:
             issuer.notify_online(self)
 
@@ -103,14 +103,14 @@ class PushHolderGossipNode:
         peer.receive_gossip(self.cached_list)
 
     def receive_push(self, new_list: StatusList) -> None:
-        #Pieņem push no izdevēja
+        # Accept a push from the issuer
         self._absorb(new_list)
 
     def receive_gossip(self, new_list: StatusList) -> None:
         self._absorb(new_list)
 
     def receive_holder_list(self, new_list: StatusList) -> None:
-        #Pieņem push no holdera, ar kuru notiek prezentācija
+        # Accept a list from the holder presenting a credential
         self._absorb(new_list)
 
     def _absorb(self, new_list: StatusList) -> None:

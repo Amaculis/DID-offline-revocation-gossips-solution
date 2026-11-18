@@ -15,7 +15,7 @@ class Issuer:
         rng: random.Random,
     ):
         self.env = env
-        self.revocation_rate = revocation_rate  # notikumu skaits sekundē
+        self.revocation_rate = revocation_rate  # events per second
         self.ttl = ttl
         self.rng = rng
 
@@ -38,11 +38,10 @@ class Issuer:
         )
     def register(self, node) -> None:
         self._subscribers.append(node)
-        #self.notify_online(node)
 
     def _revoke_process(self):
         while True:
-            # laiks starp diviem notikumiem, ja notikumi notiek ar noteiktu vidējo ātrumu, seko eksponenciālai sadalījumam.
+            # Inter-arrival times of a Poisson process are exponentially distributed.
             delay = self.rng.expovariate(self.revocation_rate)
             yield self.env.timeout(delay)
             self._do_revoke()
@@ -61,9 +60,7 @@ class Issuer:
             self._push_to_online_nodes()
 
     def _push_to_online_nodes(self) -> None:
-        #Šis attiecas tikai uz PUSH izplatīšanas debug.
-        #print(f"[DEBUG] t={self.env.now:.0f} pushing to {sum(1 for n in self._subscribers if n.is_online)} nodes")
-  
+        # Only used by the PUSH strategy.
         for node in self._subscribers:
             if node.is_online and not node.is_dead:
                 node.receive_push(self._current_list)
@@ -77,5 +74,5 @@ class Issuer:
 
     # PUSH support   
     def notify_online(self, node) -> None:
-        #Kad parādās online, tas tiek informēts par jaunāko StatusList, lai varētu salīdzināt versijas un izlemt, vai pieņemt jauno sarakstu.
+        # A node that comes online is sent the latest StatusList so it can compare versions and decide whether to accept it.
         node.receive_push(self._current_list)
