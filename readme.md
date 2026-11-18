@@ -4,6 +4,8 @@
 ![SimPy](https://img.shields.io/badge/simulation-SimPy-informational)
 ![Scale](https://img.shields.io/badge/scale-up%20to%201M%20nodes-success)
 
+> Research context: Master's thesis, Riga Technical University (Cybersecurity) — credential revocation in decentralised Self-Sovereign Identity (SSI) systems.
+
 A discrete-event simulator that compares **how credential-revocation information reaches verifiers that are often offline**: classic PULL and PUSH against peer-to-peer gossip and a hybrid that also lets credential holders carry fresh revocation lists between verifiers.
 
 **Core question:** when many verifiers have no (or only intermittent) connection to the issuer, how long do they stay blind to a revocation, and how often do they wrongly accept a revoked credential (*false acceptance rate*, FAR)?
@@ -53,7 +55,11 @@ flowchart LR
 
 ## Quick start
 
+Requires Python 3.10+.
+
 ```bash
+git clone https://github.com/Amaculis/DID-offline-revocation-gossips-solution.git
+cd DID-offline-revocation-gossips-solution
 pip install -r requirements.txt
 
 # Compare all strategies once and print a table
