@@ -16,6 +16,7 @@ A discrete-event simulator that compares **how credential-revocation information
 
 - [Strategies](#strategies)
 - [Quick start](#quick-start)
+- [See it in action](#see-it-in-action-a-festival-example)
 - [Key results](#key-results)
 - [How the simulation works](#how-the-simulation-works)
 - [Metrics](#metrics)
@@ -69,6 +70,18 @@ python main.py
 Edit `PARAMS` in [main.py](main.py) to change network size, TTL, dead ratio, etc. Several ready-made real-world scenarios (smart city, factory, expedition, …) are defined there too.
 
 > **Tip:** start small. 500 nodes take roughly 30 s per strategy; 5 000 nodes take about 20 min per strategy. Use the multiprocessing sweeps below for larger studies.
+
+## See it in action: a festival example
+
+Imagine a festival where ticket scanners (the **verifiers**) have patchy mobile coverage: some are offline for hours and 30 % have no signal at all. At 00:10 the organiser (the **issuer**) revokes a stolen ticket. Each panel below shows the same 60 scanners; **red scanners would still accept the stolen ticket, green ones know it is revoked**. Squares are scanners with no internet.
+
+![Animated revocation propagation](docs/img/propagation.gif)
+
+- **PULL / PUSH** stall at 70 %: scanners without any connection to the issuer never find out.
+- **GOSSIP** spreads the news scanner-to-scanner and through visitors who walk between scanners with their tickets.
+- **MIXED** adds issuer pushes on top and is fastest.
+
+Reproduce or change the scenario: `python experiments/animate_propagation.py --nodes 80 --hours 12`.
 
 ## Key results
 
@@ -272,6 +285,7 @@ experiments/
 ├── run_averaged.py          # quick N-seed averaged run
 ├── plot_results.py          # plots from CSV files
 ├── plot_heatmap_2d.py       # 2D heatmaps
+├── animate_propagation.py   # animated GIF of one revocation spreading
 └── results/                 # CSV / PNG outputs
 docs/img/                    # figures used in this README
 graphs/                      # design diagrams (Mermaid / draw.io)
